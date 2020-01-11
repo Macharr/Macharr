@@ -15,9 +15,9 @@ namespace NzbDrone.Core.Parser
         private static readonly Logger Logger = NzbDroneLogger.GetLogger(typeof(QualityParser));
 
         private static readonly Regex SourceRegex = new Regex(@"\b(?:
-                                                                (?<bluray>BluRay|Blu-Ray|HD-?DVD|BD)|
-                                                                (?<webdl>WEB[-_. ]DL|WEBDL|AmazonHD|iTunesHD|NetflixU?HD|WebHD|[. ]WEB[. ](?:[xh]26[45]|DDP?5[. ]1)|\d+0p[. ]WEB[. ]|WEB-DLMux)|
-                                                                (?<webrip>WebRip)|
+                                                                (?<bluray>BluRay|Blu-Ray|HD-?DVD|BD(?!$))|
+                                                                (?<webdl>WEB[-_. ]DL|WEBDL|AmazonHD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|[. ]WEB[. ](?:[xh]26[45]|DDP?5[. ]1)|\d+0p(?:[-. ]AMZN)?[-. ]WEB[-. ]|WEB-DLMux|\b\s\/\sWEB\s\/\s\b|AMZN[. ]WEB[. ])|
+                                                                (?<webrip>WebRip|Web-Rip|WEBMux)|
                                                                 (?<hdtv>HDTV)|
                                                                 (?<bdrip>BDRip)|
                                                                 (?<brrip>BRRip)|
@@ -26,14 +26,17 @@ namespace NzbDrone.Core.Parser
                                                                 (?<pdtv>PDTV)|
                                                                 (?<sdtv>SDTV)|
                                                                 (?<tvrip>TVRip)
-                                                                )\b",
+                                                                )(?:\b|$|[ .])",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 
         private static readonly Regex RawHDRegex = new Regex(@"\b(?<rawhd>RawHD|1080i[-_. ]HDTV|Raw[-_. ]HD|MPEG[-_. ]?2)\b",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        private static readonly Regex ProperRegex = new Regex(@"\b(?<proper>proper|repack|rerip)\b",
+        private static readonly Regex ProperRegex = new Regex(@"\b(?<proper>proper)\b",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex RepackRegex = new Regex(@"\b(?<repack>repack|rerip)\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex VersionRegex = new Regex(@"\dv(?<version>\d)\b|\[v(?<version>\d)\]",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -92,7 +95,8 @@ namespace NzbDrone.Core.Parser
                 return result;
             }
 
-            var sourceMatch = SourceRegex.Matches(normalizedName).OfType<Match>().LastOrDefault();
+            var sourceMatches = SourceRegex.Matches(normalizedName);
+            var sourceMatch = sourceMatches.OfType<Match>().LastOrDefault();
             var resolution = ParseResolution(normalizedName);
             var codecRegex = CodecRegex.Match(normalizedName);
             var remuxMatch = RemuxRegex.IsMatch(normalizedName);
@@ -424,6 +428,12 @@ namespace NzbDrone.Core.Parser
                 result.Revision.Version = 2;
             }
 
+            if (RepackRegex.IsMatch(normalizedName))
+            {
+                result.Revision.Version = 2;
+                result.Revision.IsRepack = true;
+            }
+
             var versionRegexResult = VersionRegex.Match(normalizedName);
 
             if (versionRegexResult.Success)
@@ -432,7 +442,7 @@ namespace NzbDrone.Core.Parser
             }
 
             // TODO: re-enable this when we have a reliable way to determine real
-            // TODO: Only treat it as a real if it comes AFTER the season/epsiode number
+            // TODO: Only treat it as a real if it comes AFTER the season/episode number
             var realRegexResult = RealRegex.Matches(name);
 
             if (realRegexResult.Count > 0)

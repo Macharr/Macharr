@@ -26,6 +26,8 @@ namespace NzbDrone.Common.Http
 
     public class HttpClient : IHttpClient
     {
+        private const int MaxRedirects = 5;
+
         private readonly Logger _logger;
         private readonly IRateLimitService _rateLimitService;
         private readonly ICached<CookieContainer> _cookieContainerCache;
@@ -68,7 +70,7 @@ namespace NzbDrone.Common.Http
 
                     _logger.Trace("Redirected to {0}", request.Url);
 
-                    if (autoRedirectChain.Count > 3)
+                    if (autoRedirectChain.Count > MaxRedirects)
                     {
                         throw new WebException($"Too many automatic redirections were attempted for {autoRedirectChain.Join(" -> ")}", WebExceptionStatus.ProtocolError);
                     }
@@ -131,7 +133,7 @@ namespace NzbDrone.Common.Http
                 response = interceptor.PostResponse(response);
             }
 
-            if (request.LogResponseContent)
+            if (request.LogResponseContent && response.ResponseData != null)
             {
                 _logger.Trace("Response content ({0} bytes): {1}", response.ResponseData.Length, response.Content);
             }
@@ -229,6 +231,8 @@ namespace NzbDrone.Common.Http
 
         public void DownloadFile(string url, string fileName)
         {
+            var fileNamePart = fileName + ".part";
+
             try
             {
                 var fileInfo = new FileInfo(fileName);
@@ -240,21 +244,26 @@ namespace NzbDrone.Common.Http
                 _logger.Debug("Downloading [{0}] to [{1}]", url, fileName);
 
                 var stopWatch = Stopwatch.StartNew();
-                var webClient = new GZipWebClient();
-                webClient.Headers.Add(HttpRequestHeader.UserAgent, _userAgentBuilder.GetUserAgent());
-                webClient.DownloadFile(url, fileName);
+                using (var fileStream = new FileStream(fileNamePart, FileMode.Create, FileAccess.ReadWrite))
+                {
+                    var request = new HttpRequest(url);
+                    request.ResponseStream = fileStream;
+                    var response = Get(request);
+                }
                 stopWatch.Stop();
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
+                File.Move(fileNamePart, fileName);
                 _logger.Debug("Downloading Completed. took {0:0}s", stopWatch.Elapsed.Seconds);
             }
-            catch (WebException e)
+            finally
             {
-                _logger.Warn("Failed to get response from: {0} {1}", url, e.Message);
-                throw;
-            }
-            catch (Exception e)
-            {
-                _logger.Warn(e, "Failed to get response from: " + url);
-                throw;
+                if (File.Exists(fileNamePart))
+                {
+                    File.Delete(fileNamePart);
+                }  
             }
         }
 

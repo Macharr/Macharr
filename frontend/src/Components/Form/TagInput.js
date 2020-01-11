@@ -1,16 +1,17 @@
 import _ from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import Autosuggest from 'react-autosuggest';
 import classNames from 'classnames';
 import { kinds } from 'Helpers/Props';
+import tagShape from 'Helpers/Props/Shapes/tagShape';
+import AutoSuggestInput from './AutoSuggestInput';
 import TagInputInput from './TagInputInput';
 import TagInputTag from './TagInputTag';
 import styles from './TagInput.css';
 
 function getTag(value, selectedIndex, suggestions, allowNew) {
   if (selectedIndex == null && value) {
-    const existingTag = _.find(suggestions, { name: value });
+    const existingTag = suggestions.find((suggestion) => suggestion.name === value);
 
     if (existingTag) {
       return existingTag;
@@ -183,7 +184,7 @@ class TagInput extends Component {
   //
   // Render
 
-  renderInputComponent = (inputProps) => {
+  renderInputComponent = (inputProps, forwardedRef) => {
     const {
       tags,
       kind,
@@ -193,6 +194,7 @@ class TagInput extends Component {
 
     return (
       <TagInputInput
+        forwardedRef={forwardedRef}
         tags={tags}
         kind={kind}
         inputProps={inputProps}
@@ -207,10 +209,8 @@ class TagInput extends Component {
   render() {
     const {
       className,
-      inputClassName,
-      placeholder,
-      hasError,
-      hasWarning
+      inputContainerClassName,
+      ...otherProps
     } = this.props;
 
     const {
@@ -219,61 +219,38 @@ class TagInput extends Component {
       isFocused
     } = this.state;
 
-    const inputProps = {
-      className: inputClassName,
-      name,
-      value,
-      placeholder,
-      autoComplete: 'off',
-      spellCheck: false,
-      onChange: this.onInputChange,
-      onKeyDown: this.onInputKeyDown,
-      onFocus: this.onInputFocus,
-      onBlur: this.onInputBlur
-    };
-
-    const theme = {
-      container: classNames(
-        className,
-        isFocused && styles.isFocused,
-        hasError && styles.hasError,
-        hasWarning && styles.hasWarning,
-      ),
-      containerOpen: styles.containerOpen,
-      suggestionsContainer: styles.suggestionsContainer,
-      suggestionsList: styles.suggestionsList,
-      suggestion: styles.suggestion,
-      suggestionHighlighted: styles.suggestionHighlighted
-    };
-
     return (
-      <Autosuggest
-        ref={this._setAutosuggestRef}
-        id={name}
-        inputProps={inputProps}
-        theme={theme}
+      <AutoSuggestInput
+        {...otherProps}
+        forwardedRef={this._setAutosuggestRef}
+        className={styles.internalInput}
+        inputContainerClassName={classNames(
+          inputContainerClassName,
+          isFocused && styles.isFocused
+        )}
+        value={value}
         suggestions={suggestions}
         getSuggestionValue={this.getSuggestionValue}
         shouldRenderSuggestions={this.shouldRenderSuggestions}
         focusInputOnSuggestionClick={false}
         renderSuggestion={this.renderSuggestion}
         renderInputComponent={this.renderInputComponent}
+        onInputChange={this.onInputChange}
+        onInputKeyDown={this.onInputKeyDown}
+        onInputFocus={this.onInputFocus}
+        onInputBlur={this.onInputBlur}
         onSuggestionSelected={this.onSuggestionSelected}
         onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
         onSuggestionsClearRequested={this.onSuggestionsClearRequested}
+        onChange={this.onInputChange}
       />
     );
   }
 }
 
-export const tagShape = {
-  id: PropTypes.oneOfType([PropTypes.bool, PropTypes.number, PropTypes.string]).isRequired,
-  name: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired
-};
-
 TagInput.propTypes = {
   className: PropTypes.string.isRequired,
-  inputClassName: PropTypes.string.isRequired,
+  inputContainerClassName: PropTypes.string.isRequired,
   tags: PropTypes.arrayOf(PropTypes.shape(tagShape)).isRequired,
   tagList: PropTypes.arrayOf(PropTypes.shape(tagShape)).isRequired,
   allowNew: PropTypes.bool.isRequired,
@@ -283,14 +260,14 @@ TagInput.propTypes = {
   minQueryLength: PropTypes.number.isRequired,
   hasError: PropTypes.bool,
   hasWarning: PropTypes.bool,
-  tagComponent: PropTypes.func.isRequired,
+  tagComponent: PropTypes.elementType.isRequired,
   onTagAdd: PropTypes.func.isRequired,
   onTagDelete: PropTypes.func.isRequired
 };
 
 TagInput.defaultProps = {
-  className: styles.inputContainer,
-  inputClassName: styles.input,
+  className: styles.internalInput,
+  inputContainerClassName: styles.input,
   allowNew: true,
   kind: kinds.INFO,
   placeholder: '',

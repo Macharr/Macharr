@@ -19,7 +19,7 @@ namespace NzbDrone.Core.Download.Clients.Deluge
         string[] GetAvailablePlugins(DelugeSettings settings);
         string[] GetEnabledPlugins(DelugeSettings settings);
         string[] GetAvailableLabels(DelugeSettings settings);
-        void SetLabel(string hash, string label, DelugeSettings settings);
+        void SetTorrentLabel(string hash, string label, DelugeSettings settings);
         void SetTorrentConfiguration(string hash, string key, object value, DelugeSettings settings);
         void SetTorrentSeedingConfiguration(string hash, TorrentSeedConfiguration seedConfiguration, DelugeSettings settings);
         void AddLabel(string label, DelugeSettings settings);
@@ -48,9 +48,25 @@ namespace NzbDrone.Core.Download.Clients.Deluge
 
         public string GetVersion(DelugeSettings settings)
         {
-            var response = ProcessRequest<string>(settings, "daemon.info");
+            try
+            {
+                var response = ProcessRequest<string>(settings, "daemon.info");
 
-            return response;
+                return response;
+            }
+            catch (DownloadClientException ex)
+            {
+                if (ex.Message.Contains("Unknown method"))
+                {
+                    // Deluge v2 beta replaced 'daemon.info' with 'daemon.get_version'.
+                    // It may return or become official, for now we just retry with the get_version api.
+                    var response = ProcessRequest<string>(settings, "daemon.get_version");
+
+                    return response;
+                }
+
+                throw;
+            }
         }
 
         public Dictionary<string, object> GetConfig(DelugeSettings settings)
@@ -169,7 +185,7 @@ namespace NzbDrone.Core.Download.Clients.Deluge
             ProcessRequest<object>(settings, "label.add", label);
         }
 
-        public void SetLabel(string hash, string label, DelugeSettings settings)
+        public void SetTorrentLabel(string hash, string label, DelugeSettings settings)
         {
             ProcessRequest<object>(settings, "label.set_torrent", hash, label);
         }

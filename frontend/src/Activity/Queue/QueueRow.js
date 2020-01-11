@@ -68,6 +68,7 @@ class QueueRow extends Component {
       title,
       status,
       trackedDownloadStatus,
+      trackedDownloadState,
       statusMessages,
       errorMessage,
       series,
@@ -76,6 +77,7 @@ class QueueRow extends Component {
       quality,
       protocol,
       indexer,
+      outputPath,
       downloadClient,
       estimatedCompletionTime,
       timeleft,
@@ -99,8 +101,8 @@ class QueueRow extends Component {
     } = this.state;
 
     const progress = 100 - (sizeleft / size * 100);
-    const showInteractiveImport = status === 'Completed' && trackedDownloadStatus === 'Warning';
-    const isPending = status === 'Delay' || status === 'DownloadClientUnavailable';
+    const showInteractiveImport = status === 'completed' && trackedDownloadStatus === 'warning';
+    const isPending = status === 'delay' || status === 'downloadClientUnavailable';
 
     return (
       <TableRow>
@@ -128,6 +130,7 @@ class QueueRow extends Component {
                   sourceTitle={title}
                   status={status}
                   trackedDownloadStatus={trackedDownloadStatus}
+                  trackedDownloadState={trackedDownloadState}
                   statusMessages={statusMessages}
                   errorMessage={errorMessage}
                 />
@@ -252,6 +255,22 @@ class QueueRow extends Component {
               );
             }
 
+            if (name === 'title') {
+              return (
+                <TableRowCell key={name}>
+                  {title}
+                </TableRowCell>
+              );
+            }
+
+            if (name === 'outputPath') {
+              return (
+                <TableRowCell key={name}>
+                  {outputPath}
+                </TableRowCell>
+              );
+            }
+
             if (name === 'estimatedCompletionTime') {
               return (
                 <TimeleftCell
@@ -333,6 +352,7 @@ class QueueRow extends Component {
         <RemoveQueueItemModal
           isOpen={isRemoveQueueItemModalOpen}
           sourceTitle={title}
+          canIgnore={!!(series && episode)}
           onRemovePress={this.onRemoveQueueItemModalConfirmed}
           onModalClose={this.onRemoveQueueItemModalClose}
         />
@@ -348,6 +368,7 @@ QueueRow.propTypes = {
   title: PropTypes.string.isRequired,
   status: PropTypes.string.isRequired,
   trackedDownloadStatus: PropTypes.string,
+  trackedDownloadState: PropTypes.string,
   statusMessages: PropTypes.arrayOf(PropTypes.object),
   errorMessage: PropTypes.string,
   series: PropTypes.object,
@@ -356,6 +377,7 @@ QueueRow.propTypes = {
   quality: PropTypes.object.isRequired,
   protocol: PropTypes.string.isRequired,
   indexer: PropTypes.string,
+  outputPath: PropTypes.string,
   downloadClient: PropTypes.string,
   estimatedCompletionTime: PropTypes.string,
   timeleft: PropTypes.string,

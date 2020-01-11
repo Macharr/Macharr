@@ -55,7 +55,8 @@ namespace Sonarr.Api.V3.Series
                             SeriesAncestorValidator seriesAncestorValidator,
                             SystemFolderValidator systemFolderValidator,
                             ProfileExistsValidator profileExistsValidator,
-                            LanguageProfileExistsValidator languageProfileExistsValidator
+                            LanguageProfileExistsValidator languageProfileExistsValidator,
+                            SeriesFolderAsRootFolderValidator seriesFolderAsRootFolderValidator
             )
             : base(signalRBroadcaster)
         {
@@ -90,7 +91,10 @@ namespace Sonarr.Api.V3.Series
             SharedValidator.RuleFor(s => s.LanguageProfileId).SetValidator(languageProfileExistsValidator);
 
             PostValidator.RuleFor(s => s.Path).IsValidPath().When(s => s.RootFolderPath.IsNullOrWhiteSpace());
-            PostValidator.RuleFor(s => s.RootFolderPath).IsValidPath().When(s => s.Path.IsNullOrWhiteSpace());
+            PostValidator.RuleFor(s => s.RootFolderPath)
+                         .IsValidPath()
+                         .SetValidator(seriesFolderAsRootFolderValidator)
+                         .When(s => s.Path.IsNullOrWhiteSpace());
             PostValidator.RuleFor(s => s.Title).NotEmpty();
             PostValidator.RuleFor(s => s.TvdbId).GreaterThan(0).SetValidator(seriesExistsValidator);
 
@@ -99,9 +103,19 @@ namespace Sonarr.Api.V3.Series
 
         private List<SeriesResource> AllSeries()
         {
+            var tvdbId = Request.GetIntegerQueryParameter("tvdbId");
             var includeSeasonImages = Request.GetBooleanQueryParameter("includeSeasonImages");
             var seriesStats = _seriesStatisticsService.SeriesStatistics();
-            var seriesResources = _seriesService.GetAllSeries().Select(s => s.ToResource(includeSeasonImages)).ToList();
+            var seriesResources = new List<SeriesResource>();
+
+            if (tvdbId > 0)
+            {
+                seriesResources.AddIfNotNull(_seriesService.FindByTvdbId(tvdbId).ToResource(includeSeasonImages));
+            }
+            else
+            {
+                seriesResources.AddRange(_seriesService.GetAllSeries().Select(s => s.ToResource(includeSeasonImages)));
+            }
 
             MapCoversToLocal(seriesResources.ToArray());
             LinkSeriesStatistics(seriesResources, seriesStats);

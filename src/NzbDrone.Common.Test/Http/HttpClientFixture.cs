@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -22,7 +22,6 @@ namespace NzbDrone.Common.Test.Http
 {
     [IntegrationTest]
     [TestFixture(typeof(ManagedHttpDispatcher))]
-    [TestFixture(typeof(CurlHttpDispatcher))]
     public class HttpClientFixture<TDispatcher> : TestBase<HttpClient> where TDispatcher : IHttpDispatcher
     {
         private string[] _httpBinHosts;
@@ -130,11 +129,12 @@ namespace NzbDrone.Common.Test.Http
         [Test]
         public void should_execute_typed_get()
         {
-            var request = new HttpRequest($"https://{_httpBinHost}/get");
+            var request = new HttpRequest($"http://{_httpBinHost}/get?test=1");
 
             var response = Subject.Get<HttpBinResource>(request);
 
-            response.Resource.Url.Should().Be(request.Url.FullUri);
+            response.Resource.Url.EndsWith("/get?test=1");
+            response.Resource.Args.Should().Contain("test", "1");
         }
 
         [Test]
@@ -238,7 +238,7 @@ namespace NzbDrone.Common.Test.Http
         [Test]
         public void should_throw_on_too_many_redirects()
         {
-            var request = new HttpRequest($"http://{_httpBinHost}/redirect/4");
+            var request = new HttpRequest($"http://{_httpBinHost}/redirect/6");
             request.AllowAutoRedirect = true;
 
             Assert.Throws<WebException>(() => Subject.Get(request));
@@ -272,15 +272,58 @@ namespace NzbDrone.Common.Test.Http
         }
 
         [Test]
+        public void should_download_file()
+        {
+            var file = GetTempFilePath();
+
+            var url = "https://sonarr.tv/img/slider/seriesdetails.png";
+
+            Subject.DownloadFile(url, file);
+
+            File.Exists(file).Should().BeTrue();
+            File.Exists(file + ".part").Should().BeFalse();
+
+            var fileInfo = new FileInfo(file);
+
+            fileInfo.Length.Should().Be(307054);
+        }
+
+        [Test]
         public void should_not_download_file_with_error()
         {
             var file = GetTempFilePath();
 
-            Assert.Throws<WebException>(() => Subject.DownloadFile("http://download.sonarr.tv/wrongpath", file));
+            Assert.Throws<HttpException>(() => Subject.DownloadFile("http://download.sonarr.tv/wrongpath", file));
 
             File.Exists(file).Should().BeFalse();
+            File.Exists(file + ".part").Should().BeFalse();
 
             ExceptionVerification.ExpectedWarns(1);
+        }
+
+        [Test]
+        public void should_not_write_redirect_content_to_stream()
+        {
+            var file = GetTempFilePath();
+
+            using (var fileStream = new FileStream(file, FileMode.Create))
+            {
+                var request = new HttpRequest($"http://{_httpBinHost}/redirect/1");
+                request.AllowAutoRedirect = false;
+                request.ResponseStream = fileStream;
+
+                var response = Subject.Get(request);
+
+                response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            }
+
+            ExceptionVerification.ExpectedErrors(1);
+
+            File.Exists(file).Should().BeTrue();
+
+            var fileInfo = new FileInfo(file);
+
+            fileInfo.Length.Should().Be(0);
         }
 
         [Test]
@@ -706,6 +749,7 @@ namespace NzbDrone.Common.Test.Http
 
     public class HttpBinResource
     {
+        public Dictionary<string, object> Args { get; set; }
         public Dictionary<string, object> Headers { get; set; }
         public string Origin { get; set; }
         public string Url { get; set; }

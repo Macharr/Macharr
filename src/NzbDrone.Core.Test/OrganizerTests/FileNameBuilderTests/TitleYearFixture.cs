@@ -48,7 +48,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
         [TestCase("The Mist", 2018, "The Mist (2018)")]
         [TestCase("The Rat Pack (A&E)", 1999, "The Rat Pack (A&E) (1999)")]
-        [TestCase("The Climax: I (Almost) Got Away With It (2016)", 2016, "The Climax- I (Almost) Got Away With It (2016)")]
+        [TestCase("The Climax: I (Almost) Got Away With It (2016)", 2016, "The Climax - I (Almost) Got Away With It (2016)")]
         public void should_get_expected_title_back(string title, int year, string expected)
         {
             _series.Title = title;
@@ -57,6 +57,17 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildFileName(new List<Episode> { _episode }, _series, _episodeFile)
                    .Should().Be(expected);
+        }
+
+        [Test]
+        public void should_not_include_0_for_year()
+        {
+            _series.Title = "The Alienist";
+            _series.Year = 0;
+            _namingConfig.StandardEpisodeFormat = "{Series TitleYear}";
+
+            Subject.BuildFileName(new List<Episode> { _episode }, _series, _episodeFile)
+                   .Should().Be("The Alienist");
         }
     }
 }

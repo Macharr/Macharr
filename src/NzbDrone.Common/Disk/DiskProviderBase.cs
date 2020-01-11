@@ -32,6 +32,7 @@ namespace NzbDrone.Common.Disk
         public abstract long? GetAvailableSpace(string path);
         public abstract void InheritFolderPermissions(string filename);
         public abstract void SetPermissions(string path, string mask, string user, string group);
+        public abstract void CopyPermissions(string sourcePath, string targetPath, bool includeOwner);
         public abstract long? GetTotalSize(string path);
 
         public DateTime FolderGetCreationTime(string path)
@@ -418,7 +419,12 @@ namespace NzbDrone.Common.Disk
             return new FileStream(path, FileMode.Create);
         }
 
-        public virtual List<IMount> GetMounts()
+        public List<IMount> GetMounts()
+        {
+            return GetAllMounts().Where(d => !IsSpecialMount(d)).ToList();
+        }
+
+        protected virtual List<IMount> GetAllMounts()
         {
             return GetDriveInfoMounts().Where(d => d.DriveType == DriveType.Fixed || d.DriveType == DriveType.Network || d.DriveType == DriveType.Removable)
                                        .Select(d => new DriveInfoMount(d))
@@ -426,11 +432,16 @@ namespace NzbDrone.Common.Disk
                                        .ToList();
         }
 
+        protected virtual bool IsSpecialMount(IMount mount)
+        {
+            return false;
+        }
+
         public virtual IMount GetMount(string path)
         {
             try
             {
-                var mounts = GetMounts();
+                var mounts = GetAllMounts();
 
                 return mounts.Where(drive => drive.RootDirectory.PathEquals(path) ||
                                              drive.RootDirectory.IsParentPath(path))
@@ -471,7 +482,7 @@ namespace NzbDrone.Common.Disk
 
         public void RemoveEmptySubfolders(string path)
         {
-            var subfolders = GetDirectories(path);
+            var subfolders = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
             var files = GetFiles(path, SearchOption.AllDirectories);
 
             foreach (var subfolder in subfolders)

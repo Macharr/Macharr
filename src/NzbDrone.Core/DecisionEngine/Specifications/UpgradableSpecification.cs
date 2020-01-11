@@ -1,4 +1,5 @@
 using NLog;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Profiles.Languages;
 using NzbDrone.Core.Profiles.Qualities;
@@ -18,89 +19,82 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
     public class UpgradableSpecification : IUpgradableSpecification
     {
+        private readonly IConfigService _configService;
         private readonly Logger _logger;
 
-        public UpgradableSpecification(Logger logger)
+        public UpgradableSpecification(IConfigService configService, Logger logger)
         {
+            _configService = configService;
             _logger = logger;
-        }
-
-        private bool IsLanguageUpgradable(LanguageProfile profile, Language currentLanguage, Language newLanguage = null) 
-        {
-            if (newLanguage != null)
-            {
-                var compare = new LanguageComparer(profile).Compare(newLanguage, currentLanguage);
-                if (compare <= 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private bool IsQualityUpgradable(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality = null)
-        {
-            if (newQuality != null)
-            {
-                var compare = new QualityModelComparer(profile).Compare(newQuality, currentQuality);
-
-                if (compare <= 0)
-                {
-                    _logger.Debug("Existing item has better quality, skipping");
-                    return false;
-                }
-            }
-            return true;
         }
 
         private bool IsPreferredWordUpgradable(int currentScore, int newScore)
         {
+            _logger.Debug("Comparing preferred word score. Current: {0} New: {1}", currentScore, newScore);
+
             return newScore > currentScore;
         }
 
         public bool IsUpgradable(QualityProfile qualityProfile, LanguageProfile languageProfile, QualityModel currentQuality, Language currentLanguage, int currentScore, QualityModel newQuality, Language newLanguage, int newScore)
         {
-            if (IsQualityUpgradable(qualityProfile, currentQuality, newQuality))
+            var qualityComparer = new QualityModelComparer(qualityProfile);
+            var qualityCompare = qualityComparer.Compare(newQuality?.Quality, currentQuality.Quality);
+
+            if (qualityCompare > 0)
             {
+                _logger.Debug("New item has a better quality");
                 return true;
             }
 
-            if (new QualityModelComparer(qualityProfile).Compare(newQuality, currentQuality) < 0)
+            if (qualityCompare < 0)
             {
                 _logger.Debug("Existing item has better quality, skipping");
                 return false;
             }
 
-            if (IsLanguageUpgradable(languageProfile, currentLanguage, newLanguage))
+            // Accept unless the user doesn't want to prefer propers, optionally they can
+            // use preferred words to prefer propers/repacks over non-propers/repacks.
+            if (_configService.DownloadPropersAndRepacks != ProperDownloadTypes.DoNotPrefer &&
+                newQuality?.Revision.CompareTo(currentQuality.Revision) > 0)
             {
+                _logger.Debug("New item has a better quality revision");
                 return true;
             }
 
-            if (new LanguageComparer(languageProfile).Compare(newLanguage, currentLanguage) < 0)
+            var languageCompare = new LanguageComparer(languageProfile).Compare(newLanguage, currentLanguage);
+
+            if (languageCompare > 0)
+            {
+                _logger.Debug("New item has a more preferred language");
+                return true;
+            }
+
+            if (languageCompare < 0)
             {
                 _logger.Debug("Existing item has better language, skipping");
                 return false;
             }
-
+            
             if (!IsPreferredWordUpgradable(currentScore, newScore))
             {
                 _logger.Debug("Existing item has a better preferred word score, skipping");
                 return false;
             }
 
+            _logger.Debug("New item has a better preferred word score");
             return true;
         }
 
         public bool QualityCutoffNotMet(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality = null)
         {
-            var qualityCompare = new QualityModelComparer(profile).Compare(currentQuality.Quality.Id, profile.Cutoff);
+            var cutoffCompare = new QualityModelComparer(profile).Compare(currentQuality.Quality.Id, profile.Cutoff);
 
-            if (qualityCompare < 0)
+            if (cutoffCompare < 0)
             {
                 return true;
             }
 
-            if (qualityCompare == 0 && newQuality != null && IsRevisionUpgrade(currentQuality, newQuality))
+            if (newQuality != null && IsRevisionUpgrade(currentQuality, newQuality))
             {
                 return true;
             }

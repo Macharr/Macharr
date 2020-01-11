@@ -29,6 +29,11 @@ namespace NzbDrone.Core.Notifications.PushBullet
             _proxy.SendNotification(EPISODE_DOWNLOADED_TITLE_BRANDED, message.Message, Settings);
         }
 
+        public override void OnHealthIssue(HealthCheck.HealthCheck healthCheck)
+        {
+            _proxy.SendNotification(HEALTH_ISSUE_TITLE_BRANDED, healthCheck.Message, Settings);
+        }
+
         public override ValidationResult Test()
         {
             var failures = new List<ValidationFailure>();
@@ -56,7 +61,7 @@ namespace NzbDrone.Core.Notifications.PushBullet
 
                 return new
                        {
-                           devices = devices.Where(d => d.Nickname.IsNotNullOrWhiteSpace())
+                           options = devices.Where(d => d.Nickname.IsNotNullOrWhiteSpace())
                                             .OrderBy(d => d.Nickname, StringComparer.InvariantCultureIgnoreCase)
                                             .Select(d => new
                                                          {

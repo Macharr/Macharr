@@ -19,11 +19,11 @@ namespace Sonarr.Api.V3.Series
         {
             _seriesService = seriesService;
             _commandQueueManager = commandQueueManager;
-            Put["/"] = series => SaveAll();
-            Delete["/"] = series => DeleteSeries();
+            Put("/",  series => SaveAll());
+            Delete("/",  series => DeleteSeries());
         }
 
-        private Response SaveAll()
+        private object SaveAll()
         {
             var resource = Request.Body.FromJson<SeriesEditorResource>();
             var seriesToUpdate = _seriesService.GetSeries(resource.SeriesIds);
@@ -95,21 +95,21 @@ namespace Sonarr.Api.V3.Series
                                           });
             }
 
-            return _seriesService.UpdateSeries(seriesToUpdate, !resource.MoveFiles)
+            return ResponseWithCode(_seriesService.UpdateSeries(seriesToUpdate, !resource.MoveFiles)
                                  .ToResource()
-                                 .AsResponse(HttpStatusCode.Accepted);
+                                 , HttpStatusCode.Accepted);
         }
 
-        private Response DeleteSeries()
+        private object DeleteSeries()
         {
             var resource = Request.Body.FromJson<SeriesEditorResource>();
 
             foreach (var seriesId in resource.SeriesIds)
             {
-                _seriesService.DeleteSeries(seriesId, false);
+                _seriesService.DeleteSeries(seriesId, resource.DeleteFiles);
             }
 
-            return new object().AsResponse();
+            return new object();
         }
     }
 }

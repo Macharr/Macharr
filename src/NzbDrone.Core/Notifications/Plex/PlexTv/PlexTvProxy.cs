@@ -43,10 +43,10 @@ namespace NzbDrone.Core.Notifications.Plex.PlexTv
             var requestBuilder = new HttpRequestBuilder("https://plex.tv")
                                  .Accept(HttpAccept.Json)
                                  .AddQueryParam("X-Plex-Client-Identifier", clientIdentifier)
-                                 .AddQueryParam("X-Plex-Product", "Sonarr")
+                                 .AddQueryParam("X-Plex-Product", BuildInfo.AppName)
                                  .AddQueryParam("X-Plex-Platform", "Windows")
                                  .AddQueryParam("X-Plex-Platform-Version", "7")
-                                 .AddQueryParam("X-Plex-Device-Name", "Sonarr")
+                                 .AddQueryParam("X-Plex-Device-Name", BuildInfo.AppName)
                                  .AddQueryParam("X-Plex-Version", BuildInfo.Version.ToString());
 
             return requestBuilder;
@@ -68,7 +68,7 @@ namespace NzbDrone.Core.Notifications.Plex.PlexTv
             {
                 throw new NzbDroneClientException(ex.Response.StatusCode, "Unable to connect to plex.tv");
             }
-            catch (WebException ex)
+            catch (WebException)
             {
                 throw new NzbDroneClientException(HttpStatusCode.BadRequest, "Unable to connect to plex.tv");
             }

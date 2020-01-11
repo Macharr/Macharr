@@ -21,17 +21,30 @@
 
 .organizeSelectedButton,
 .tagsButton {
-  composes: button from 'Components/Link/SpinnerButton.css';
+  composes: button from '~Components/Link/SpinnerButton.css';
 
   margin-right: 10px;
   height: 35px;
 }
 
 .deleteSelectedButton {
-  composes: button from 'Components/Link/SpinnerButton.css';
+  composes: button from '~Components/Link/SpinnerButton.css';
 
   margin-left: 50px;
   height: 35px;
+}
+
+@media only screen and (max-width: $breakpointExtraLarge) {
+  .deleteSelectedButton {
+    margin-left: 0;
+  }
+}
+
+@media only screen and (max-width: $breakpointLarge) {
+  .buttonContainer {
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
 }
 
 @media only screen and (max-width: $breakpointSmall) {

@@ -107,6 +107,7 @@ namespace NzbDrone.Core.Test.ParserTests
 
         [TestCase("Clarissa.Explains.It.All.S02E10.480p.HULU.WEBRip.x264-Puffin", false)]
         [TestCase("Duck.Dynasty.S10E14.Techs.And.Balances.480p.AE.WEBRip.AAC2.0.x264-SEA", false)]
+        [TestCase("Series.Title.1x04.ITA.WEBMux.x264-NovaRip", false)]
         public void should_parse_webrip480p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, Quality.WEBRip480p, proper);
@@ -183,6 +184,10 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Hush 2016 German DD51 DL 720p NetflixHD x264-TVS", false)]
         [TestCase("Community.6x10.Basic.RV.Repair.and.Palmistry.ITA.ENG.720p.WEB-DLMux.H.264-GiuseppeTnT", false)]
         [TestCase("Community.6x11.Modern.Espionage.ITA.ENG.720p.WEB.DLMux.H.264-GiuseppeTnT", false)]
+        [TestCase("The Walking Dead 2010 S09E13 [MKV / H.264 / AC3/AAC / WEB / Dual Áudio / Inglês / 720p]", false)]
+        [TestCase("into.the.badlands.s03e16.h264.720p-web-handbrake.mkv", false)]
+        [TestCase("BrainDead.S01E01.The.Insanity.Principle.720p.WEB-DL.DD5.1.H.264-BD", false)]
+        [TestCase("Jerks.S03E05.Griebnitzsee.German.720p.MaxdomeHD.AVC-TVS", false)]
         public void should_parse_webdl720p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, Quality.WEBDL720p, proper);
@@ -191,6 +196,7 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Arrested.Development.S04E01.720p.WEBRip.AAC2.0.x264-NFRiP", false)]
         [TestCase("American.Gods.S01E07.A.Prayer.For.Mad.Sweeney.720p.AMZN.WEBRip.DD5.1.x264-NTb", false)]
         [TestCase("LEGO.Star.Wars.The.Freemaker.Adventures.S07E01.A.New.Home.720p.DSNY.WEBRip.AAC2.0.x264-TVSmash", false)]
+        [TestCase("Series.Title.1x04.ITA.720p.WEBMux.x264-NovaRip", false)]
         public void should_parse_webrip720p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, Quality.WEBRip720p, proper);
@@ -216,6 +222,8 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Played.S01E08.Pro.Gamer.1440p.BKPL.WEB-DL.H.264-LiGHT", false)]
         [TestCase("Good.Luck.Charlie.S04E11.Teddy's.Choice.FHD.1080p.Web-DL", false)]
         [TestCase("Outlander.S04E03.The.False.Bride.1080p.NF.WEB.DDP5.1.x264-NTb[rartv]", false)]
+        [TestCase("Legacies.S02E02.This.Year.Will.Be.Different.1080p.AMZN.WEB...", false)]
+        [TestCase("Legacies.S02E02.This.Year.Will.Be.Different.1080p.AMZN.WEB.", false)]
         public void should_parse_webdl1080p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, Quality.WEBDL1080p, proper);
@@ -224,12 +232,13 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Arrested.Development.S04E01.iNTERNAL.1080p.WEBRip.x264-QRUS", false)]
         [TestCase("Blue.Bloods.S07E20.1080p.AMZN.WEBRip.DDP5.1.x264-ViSUM ac3.(NLsub)", false)]
         [TestCase("Better.Call.Saul.S03E09.1080p.NF.WEBRip.DD5.1.x264-ViSUM", false)]
+        [TestCase("The Walking Dead S09E13 1.54 GB WEB-RIP 1080p Dual-Audio 2019 MKV", false)]
+        [TestCase("Series.Title.1x04.ITA.1080p.WEBMux.x264-NovaRip", false)]
         public void should_parse_webrip1080p_quality(string title, bool proper)
         {
             ParseAndVerifyQuality(title, Quality.WEBRip1080p, proper);
         }
 
-        
         [TestCase("The.Nightly.Show.2016.03.14.2160p.WEB.x264-spamTV", false)]
         [TestCase("The.Nightly.Show.2016.03.14.2160p.WEB.h264-spamTV", false)]
         [TestCase("The.Nightly.Show.2016.03.14.2160p.WEB.PROPER.h264-spamTV", true)]
@@ -370,6 +379,17 @@ namespace NzbDrone.Core.Test.ParserTests
         public void should_parse_quality_from_extension(string title)
         {
             QualityParser.ParseQuality(title).QualityDetectionSource.Should().Be(QualityDetectionSource.Extension);
+        }
+
+        [TestCase("Series Title S04E87 REPACK 720p HDTV x264 aAF", true)]
+        [TestCase("Series.Title.S04E87.REPACK.720p.HDTV.x264-aAF", true)]
+        [TestCase("Series.Title.S04E87.PROPER.720p.HDTV.x264-aAF", false)]
+        [TestCase("The.Expanse.S01E07.RERIP.720p.BluRay.x264-DEMAND", true)]
+        public void should_be_able_to_parse_repack(string title, bool isRepack)
+        {
+            var result = QualityParser.ParseQuality(title);
+            result.Revision.Version.Should().Be(2);
+            result.Revision.IsRepack.Should().Be(isRepack);
         }
 
         private void ParseAndVerifyQuality(string title, Quality quality, bool proper)

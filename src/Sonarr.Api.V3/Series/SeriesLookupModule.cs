@@ -3,42 +3,44 @@ using System.Linq;
 using Nancy;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MetadataSource;
+using NzbDrone.Core.Organizer;
 using NzbDrone.Core.SeriesStats;
 using Sonarr.Http;
-using Sonarr.Http.Extensions;
 
 namespace Sonarr.Api.V3.Series
 {
     public class SeriesLookupModule : SonarrRestModule<SeriesResource>
     {
         private readonly ISearchForNewSeries _searchProxy;
+        private readonly IBuildFileNames _fileNameBuilder;
 
-        public SeriesLookupModule(ISearchForNewSeries searchProxy)
+        public SeriesLookupModule(ISearchForNewSeries searchProxy, IBuildFileNames fileNameBuilder)
             : base("/series/lookup")
         {
             _searchProxy = searchProxy;
-            Get["/"] = x => Search();
+            _fileNameBuilder = fileNameBuilder;
+            Get("/",  x => Search());
         }
 
-
-        private Response Search()
+        private object Search()
         {
             var tvDbResults = _searchProxy.SearchForNewSeries((string)Request.Query.term);
-            return MapToResource(tvDbResults).AsResponse();
+            return MapToResource(tvDbResults);
         }
 
-
-        private static IEnumerable<SeriesResource> MapToResource(IEnumerable<NzbDrone.Core.Tv.Series> series)
+        private IEnumerable<SeriesResource> MapToResource(IEnumerable<NzbDrone.Core.Tv.Series> series)
         {
             foreach (var currentSeries in series)
             {
                 var resource = currentSeries.ToResource();
                 var poster = currentSeries.Images.FirstOrDefault(c => c.CoverType == MediaCoverTypes.Poster);
+
                 if (poster != null)
                 {
                     resource.RemotePoster = poster.Url;
                 }
 
+                resource.Folder = _fileNameBuilder.GetSeriesFolder(currentSeries);
                 resource.Statistics = new SeriesStatistics().ToResource(resource.Seasons);
 
                 yield return resource;

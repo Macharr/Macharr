@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
-using Nancy.Responses;
 using NzbDrone.Common.TPL;
 using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.Download.Pending;
+using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Queue;
 using NzbDrone.SignalR;
 using Sonarr.Http;
-using Sonarr.Http.Extensions;
 
 namespace Sonarr.Api.V3.Queue
 {
@@ -29,12 +28,12 @@ namespace Sonarr.Api.V3.Queue
             _broadcastDebounce = new Debouncer(BroadcastChange, TimeSpan.FromSeconds(5));
 
 
-            Get["/"] = x => GetQueueStatusResponse();
+            Get("/",  x => GetQueueStatusResponse());
         }
 
-        private JsonResponse<QueueStatusResource> GetQueueStatusResponse()
+        private object GetQueueStatusResponse()
         {
-            return GetQueueStatus().AsResponse();
+            return GetQueueStatus();
         }
 
         private QueueStatusResource GetQueueStatus()
@@ -46,10 +45,13 @@ namespace Sonarr.Api.V3.Queue
 
             var resource = new QueueStatusResource
             {
-                Count = queue.Count + pending.Count,
+                TotalCount = queue.Count + pending.Count,
+                Count = queue.Count(q => q.Series != null) + pending.Count,
                 UnknownCount = queue.Count(q => q.Series == null),
-                Errors = queue.Any(q => q.TrackedDownloadStatus.Equals("Error", StringComparison.InvariantCultureIgnoreCase)),
-                Warnings = queue.Any(q => q.TrackedDownloadStatus.Equals("Warning", StringComparison.InvariantCultureIgnoreCase))
+                Errors = queue.Any(q => q.Series != null && q.TrackedDownloadStatus == TrackedDownloadStatus.Error),
+                Warnings = queue.Any(q => q.Series != null && q.TrackedDownloadStatus == TrackedDownloadStatus.Warning),
+                UnknownErrors = queue.Any(q => q.Series == null && q.TrackedDownloadStatus == TrackedDownloadStatus.Error),
+                UnknownWarnings = queue.Any(q => q.Series == null && q.TrackedDownloadStatus == TrackedDownloadStatus.Warning)
             };
 
             _broadcastDebounce.Resume();

@@ -54,9 +54,26 @@ namespace NzbDrone.Core.Tv
         {
             _logger.ProgressInfo("Updating {0}", series.Title);
 
-            var tuple = _seriesInfo.GetSeriesInfo(series.TvdbId);
+            Series seriesInfo;
+            List<Episode> episodes;
 
-            var seriesInfo = tuple.Item1;
+            try
+            {
+                var tuple = _seriesInfo.GetSeriesInfo(series.TvdbId);
+                seriesInfo = tuple.Item1;
+                episodes = tuple.Item2;
+            }
+            catch (SeriesNotFoundException)
+            {
+                if (series.Status != SeriesStatusType.Deleted)
+                {
+                    series.Status = SeriesStatusType.Deleted;
+                    _seriesService.UpdateSeries(series);
+                    _logger.Debug("Series marked as deleted on tvdb for {0}", series.Title);
+                    _eventAggregator.PublishEvent(new SeriesUpdatedEvent(series));
+                }
+                throw;
+            }
 
             if (series.TvdbId != seriesInfo.TvdbId)
             {
@@ -102,7 +119,7 @@ namespace NzbDrone.Core.Tv
             series.Seasons = UpdateSeasons(series, seriesInfo);
 
             _seriesService.UpdateSeries(series);
-            _refreshEpisodeService.RefreshEpisodeInfo(series, tuple.Item2);
+            _refreshEpisodeService.RefreshEpisodeInfo(series, episodes);
 
             _logger.Debug("Finished series refresh for {0}", series.Title);
             _eventAggregator.PublishEvent(new SeriesUpdatedEvent(series));
@@ -145,17 +162,17 @@ namespace NzbDrone.Core.Tv
 
             if (isNew)
             {
-                _logger.Trace("Forcing refresh of {0}. Reason: New series", series);
+                _logger.Trace("Forcing rescan of {0}. Reason: New series", series);
                 shouldRescan = true;
             }
             else if (rescanAfterRefresh == RescanAfterRefreshType.Never)
             {
-                _logger.Trace("Skipping refresh of {0}. Reason: never recan after refresh", series);
+                _logger.Trace("Skipping rescan of {0}. Reason: never rescan after refresh", series);
                 shouldRescan = false;
             }
             else if (rescanAfterRefresh == RescanAfterRefreshType.AfterManual && trigger != CommandTrigger.Manual)
             {
-                _logger.Trace("Skipping refresh of {0}. Reason: not after automatic scans", series);
+                _logger.Trace("Skipping rescan of {0}. Reason: not after automatic scans", series);
                 shouldRescan = false;
             }
 
@@ -232,6 +249,8 @@ namespace NzbDrone.Core.Tv
                     }
                 }
             }
+
+            _eventAggregator.PublishEvent(new SeriesRefreshCompleteEvent());
         }
     }
 }

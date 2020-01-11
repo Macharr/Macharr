@@ -231,6 +231,40 @@ function HistoryDetails(props) {
       </DescriptionList>
     );
   }
+
+  if (eventType === 'downloadIgnored') {
+    const {
+      message
+    } = data;
+
+    return (
+      <DescriptionList>
+        <DescriptionListItem
+          descriptionClassName={styles.description}
+          title="Name"
+          data={sourceTitle}
+        />
+
+        {
+          !!message &&
+            <DescriptionListItem
+              title="Message"
+              data={message}
+            />
+        }
+      </DescriptionList>
+    );
+  }
+
+  return (
+    <DescriptionList>
+      <DescriptionListItem
+        descriptionClassName={styles.description}
+        title="Name"
+        data={sourceTitle}
+      />
+    </DescriptionList>
+  );
 }
 
 HistoryDetails.propTypes = {

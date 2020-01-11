@@ -75,7 +75,30 @@ namespace NzbDrone.Mono.Disk
             SetOwner(path, user, group);
         }
 
-        public override List<IMount> GetMounts()
+        public override void CopyPermissions(string sourcePath, string targetPath, bool includeOwner)
+        {
+            try
+            {
+                Syscall.stat(sourcePath, out var srcStat);
+                Syscall.stat(targetPath, out var tgtStat);
+
+                if (srcStat.st_mode != tgtStat.st_mode)
+                {
+                    Syscall.chmod(targetPath, srcStat.st_mode);
+                }
+
+                if (includeOwner && (srcStat.st_uid != tgtStat.st_uid || srcStat.st_gid != tgtStat.st_gid))
+                {
+                    Syscall.chown(targetPath, srcStat.st_uid, srcStat.st_gid);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug(ex, "Failed to copy permissions from {0} to {1}", sourcePath, targetPath);
+            }
+        }
+
+        protected override List<IMount> GetAllMounts()
         {
             return _procMountProvider.GetMounts()
                                      .Concat(GetDriveInfoMounts()
@@ -85,6 +108,25 @@ namespace NzbDrone.Mono.Disk
                                                              d.DriveType == DriveType.Removable))
                                      .DistinctBy(v => v.RootDirectory)
                                      .ToList();
+        }
+
+        protected override bool IsSpecialMount(IMount mount)
+        {
+            var root = mount.RootDirectory;
+
+            if (root.StartsWith("/var/lib/"))
+            {
+                // Could be /var/lib/docker when docker uses zfs. Very unlikely that a useful mount is located in /var/lib.
+                return true;
+            }
+
+            if (root.StartsWith("/snap/"))
+            {
+                // Mount point for snap packages
+                return true;
+            }
+
+            return false;
         }
 
         public override long? GetTotalSize(string path)

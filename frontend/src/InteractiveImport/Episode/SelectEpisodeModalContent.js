@@ -14,6 +14,7 @@ import ModalFooter from 'Components/Modal/ModalFooter';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import SelectEpisodeRow from './SelectEpisodeRow';
+import styles from './SelectEpisodeModalContent.css';
 
 const columns = [
   {
@@ -79,10 +80,12 @@ class SelectEpisodeModalContent extends Component {
 
   render() {
     const {
+      ids,
       isFetching,
       isPopulated,
       error,
       items,
+      relativePath,
       sortKey,
       sortDirection,
       onSortPress,
@@ -97,10 +100,20 @@ class SelectEpisodeModalContent extends Component {
 
     const errorMessage = getErrorMessage(error, 'Unable to load episodes');
 
+    const selectedFilesCount = ids.length;
+    const selectedCount = this.getSelectedIds().length;
+    const selectionIsValid = (
+      selectedCount > 0 &&
+      selectedCount % selectedFilesCount === 0
+    );
+
     return (
       <ModalContent onModalClose={onModalClose}>
         <ModalHeader>
-          Manual Import - Select Episode(s)
+          <div className={styles.header}>
+            Manual Import - Select Episode(s)
+          </div>
+
         </ModalHeader>
 
         <ModalBody>
@@ -152,17 +165,28 @@ class SelectEpisodeModalContent extends Component {
           }
         </ModalBody>
 
-        <ModalFooter>
-          <Button onPress={onModalClose}>
-            Cancel
-          </Button>
+        <ModalFooter className={styles.footer}>
+          <div className={styles.path}>
+            {
+              relativePath ?
+                relativePath :
+                `${selectedFilesCount} selected files`
+            }
+          </div>
 
-          <Button
-            kind={kinds.SUCCESS}
-            onPress={this.onEpisodesSelect}
-          >
-            Select Episodes
-          </Button>
+          <div className={styles.buttons}>
+            <Button onPress={onModalClose}>
+              Cancel
+            </Button>
+
+            <Button
+              kind={kinds.SUCCESS}
+              isDisabled={!selectionIsValid}
+              onPress={this.onEpisodesSelect}
+            >
+              Select Episodes
+            </Button>
+          </div>
         </ModalFooter>
       </ModalContent>
     );
@@ -170,10 +194,12 @@ class SelectEpisodeModalContent extends Component {
 }
 
 SelectEpisodeModalContent.propTypes = {
+  ids: PropTypes.arrayOf(PropTypes.number).isRequired,
   isFetching: PropTypes.bool.isRequired,
   isPopulated: PropTypes.bool.isRequired,
   error: PropTypes.object,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  relativePath: PropTypes.string,
   sortKey: PropTypes.string,
   sortDirection: PropTypes.string,
   onSortPress: PropTypes.func.isRequired,

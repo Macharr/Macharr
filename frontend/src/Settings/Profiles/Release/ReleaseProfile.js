@@ -62,6 +62,11 @@ class ReleaseProfile extends Component {
       tagList
     } = this.props;
 
+    const {
+      isEditReleaseProfileModalOpen,
+      isDeleteReleaseProfileModalOpen
+    } = this.state;
+
     return (
       <Card
         className={styles.releaseProfile}
@@ -130,13 +135,13 @@ class ReleaseProfile extends Component {
 
         <EditReleaseProfileModalConnector
           id={id}
-          isOpen={this.state.isEditReleaseProfileModalOpen}
+          isOpen={isEditReleaseProfileModalOpen}
           onModalClose={this.onEditReleaseProfileModalClose}
           onDeleteReleaseProfilePress={this.onDeleteReleaseProfilePress}
         />
 
         <ConfirmModal
-          isOpen={this.state.isDeleteReleaseProfileModalOpen}
+          isOpen={isDeleteReleaseProfileModalOpen}
           kind={kinds.DANGER}
           title="Delete ReleaseProfile"
           message={'Are you sure you want to delete this releaseProfile?'}

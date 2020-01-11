@@ -15,7 +15,7 @@ namespace NzbDrone.Core.Notifications.Emby
         }
 
         public override string Link => "https://emby.media/";
-        public override string Name => "Emby (Media Browser)";
+        public override string Name => "Emby";
 
 
         public override void OnGrab(GrabMessage grabMessage)
@@ -35,7 +35,7 @@ namespace NzbDrone.Core.Notifications.Emby
 
             if (Settings.UpdateLibrary)
             {
-                _mediaBrowserService.Update(Settings, message.Series);
+                _mediaBrowserService.Update(Settings, message.Series, "Created");
             }
         }
 
@@ -43,10 +43,17 @@ namespace NzbDrone.Core.Notifications.Emby
         {
             if (Settings.UpdateLibrary)
             {
-                _mediaBrowserService.Update(Settings, series);
+                _mediaBrowserService.Update(Settings, series, "Modified");
             }
         }
 
+        public override void OnHealthIssue(HealthCheck.HealthCheck message)
+        {
+            if (Settings.Notify)
+            {
+                _mediaBrowserService.Notify(Settings, HEALTH_ISSUE_TITLE_BRANDED, message.Message);
+            }
+        }
 
         public override ValidationResult Test()
         {

@@ -12,11 +12,24 @@ import FormLabel from 'Components/Form/FormLabel';
 import FormInputGroup from 'Components/Form/FormInputGroup';
 import RootFoldersConnector from 'RootFolder/RootFoldersConnector';
 import NamingConnector from './Naming/NamingConnector';
+import AddRootFolderConnector from './RootFolder/AddRootFolderConnector';
+
+const episodeTitleRequiredOptions = [
+  { key: 'always', value: 'Always' },
+  { key: 'bulkSeasonReleases', value: 'Only for Bulk Season Releases' },
+  { key: 'never', value: 'Never' }
+];
 
 const rescanAfterRefreshOptions = [
   { key: 'always', value: 'Always' },
   { key: 'afterManual', value: 'After Manual Refresh' },
   { key: 'never', value: 'Never' }
+];
+
+const downloadPropersAndRepacksOptions = [
+  { key: 'preferAndUpgrade', value: 'Prefer and Upgrade' },
+  { key: 'doNotUpgrade', value: 'Do not Upgrade Automatically' },
+  { key: 'doNotPrefer', value: 'Do not Prefer' }
 ];
 
 const fileDateOptions = [
@@ -116,6 +129,23 @@ class MediaManagement extends Component {
                     <FieldSet
                       legend="Importing"
                     >
+                      <FormGroup
+                        advancedSettings={advancedSettings}
+                        isAdvanced={true}
+                        size={sizes.SMALL}
+                      >
+                        <FormLabel>Episode Title Required</FormLabel>
+
+                        <FormInputGroup
+                          type={inputTypes.SELECT}
+                          name="episodeTitleRequired"
+                          helpText="Prevent importing for up to 24 hours if the episode title is in the naming format and the episode title is TBA"
+                          values={episodeTitleRequiredOptions}
+                          onChange={onInputChange}
+                          {...settings.episodeTitleRequired}
+                        />
+                      </FormGroup>
+
                       {
                         isMono &&
                           <FormGroup
@@ -134,6 +164,23 @@ class MediaManagement extends Component {
                             />
                           </FormGroup>
                       }
+
+                      <FormGroup
+                        advancedSettings={advancedSettings}
+                        isAdvanced={true}
+                        size={sizes.MEDIUM}
+                      >
+                        <FormLabel>Minimum Free Space</FormLabel>
+
+                        <FormInputGroup
+                          type={inputTypes.NUMBER}
+                          unit='MB'
+                          name="minimumFreeSpaceWhenImporting"
+                          helpText="Prevent import if it would leave less than this amount of disk space available"
+                          onChange={onInputChange}
+                          {...settings.minimumFreeSpaceWhenImporting}
+                        />
+                      </FormGroup>
 
                       <FormGroup
                         advancedSettings={advancedSettings}
@@ -175,7 +222,10 @@ class MediaManagement extends Component {
                             <FormInputGroup
                               type={inputTypes.TEXT}
                               name="extraFileExtensions"
-                              helpText="Comma separated list of extra files to import, ie sub,nfo (.nfo will be imported as .nfo-orig)"
+                              helpTexts={[
+                                'Comma separated list of extra files to import (.nfo will be imported as .nfo-orig)',
+                                'Examples: ".sub, .nfo" or "sub,nfo"'
+                              ]}
                               onChange={onInputChange}
                               {...settings.extraFileExtensions}
                             />
@@ -204,14 +254,23 @@ class MediaManagement extends Component {
                     isAdvanced={true}
                     size={sizes.MEDIUM}
                   >
-                    <FormLabel>Download Propers</FormLabel>
+                    <FormLabel>Propers and Repacks</FormLabel>
 
                     <FormInputGroup
-                      type={inputTypes.CHECK}
-                      name="autoDownloadPropers"
-                      helpText="Should Sonarr automatically upgrade to propers when available?"
+                      type={inputTypes.SELECT}
+                      name="downloadPropersAndRepacks"
+                      helpTexts={[
+                        'Whether or not to automatically upgrade to Propers/Repacks',
+                        'Use \'Do not Prefer\' to sort by preferred word score over propers/repacks'
+                      ]}
+                      helpTextWarning={
+                        settings.downloadPropersAndRepacks.value === 'doNotPrefer' ?
+                          'Use preferred words for automatic upgrades to propers/repacks' :
+                          undefined
+                      }
+                      values={downloadPropersAndRepacksOptions}
                       onChange={onInputChange}
-                      {...settings.autoDownloadPropers}
+                      {...settings.downloadPropersAndRepacks}
                     />
                   </FormGroup>
 
@@ -240,7 +299,7 @@ class MediaManagement extends Component {
                     <FormInputGroup
                       type={inputTypes.SELECT}
                       name="rescanAfterRefresh"
-                      helpText="Rescan the series foler after refreshing the series"
+                      helpText="Rescan the series folder after refreshing the series"
                       helpTextWarning="Sonarr will not automatically detect changes to files when not set to 'Always'"
                       values={rescanAfterRefreshOptions}
                       onChange={onInputChange}
@@ -276,6 +335,23 @@ class MediaManagement extends Component {
                       helpText="Episode files will go here when deleted instead of being permanently deleted"
                       onChange={onInputChange}
                       {...settings.recycleBin}
+                    />
+                  </FormGroup>
+
+                  <FormGroup
+                    advancedSettings={advancedSettings}
+                    isAdvanced={true}
+                  >
+                    <FormLabel>Recycling Bin Cleanup</FormLabel>
+
+                    <FormInputGroup
+                      type={inputTypes.NUMBER}
+                      name="recycleBinCleanupDays"
+                      helpText="Set to 0 to disable automatic cleanup"
+                      helpTextWarning="Files in the recycle bin older than the selected number of days will be cleaned up automatically"
+                      min={0}
+                      onChange={onInputChange}
+                      {...settings.recycleBinCleanupDays}
                     />
                   </FormGroup>
                 </FieldSet>
@@ -371,6 +447,7 @@ class MediaManagement extends Component {
 
           <FieldSet legend="Root Folders">
             <RootFoldersConnector />
+            <AddRootFolderConnector />
           </FieldSet>
         </PageContentBodyConnector>
       </PageContent>

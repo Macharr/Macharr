@@ -90,9 +90,9 @@ class SeriesSearchInput extends Component {
     );
   }
 
-  goToSeries(series) {
+  goToSeries(item) {
     this.setState({ value: '' });
-    this.props.onGoToSeries(series.titleSlug);
+    this.props.onGoToSeries(item.item.titleSlug);
   }
 
   reset() {
@@ -154,17 +154,33 @@ class SeriesSearchInput extends Component {
   }
 
   onSuggestionsFetchRequested = ({ value }) => {
-    const fuse = new Fuse(this.props.series, fuseOptions);
-    const suggestions = fuse.search(value).sort((a, b) => {
-      if (a.item.sortTitle < b.item.sortTitle) {
-        return -1;
-      }
-      if (a.item.sortTitle > b.item.sortTitle) {
-        return 1;
-      }
+    const { series } = this.props;
+    let suggestions = [];
 
-      return 0;
-    });
+    if (value.length === 1) {
+      suggestions = series.reduce((acc, s) => {
+        if (s.firstCharacter === value.toLowerCase()) {
+          acc.push({
+            item: s,
+            indices: [
+              [0, 0]
+            ],
+            matches: [
+              {
+                value: s.title,
+                key: 'title'
+              }
+            ],
+            arrayIndex: 0
+          });
+        }
+
+        return acc;
+      }, []);
+    } else {
+      const fuse = new Fuse(series, fuseOptions);
+      suggestions = fuse.search(value);
+    }
 
     this.setState({ suggestions });
   }

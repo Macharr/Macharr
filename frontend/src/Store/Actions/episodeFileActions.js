@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import $ from 'jquery';
 import { createAction } from 'redux-actions';
 import { batchActions } from 'redux-batched-actions';
+import createAjaxRequest from 'Utilities/createAjaxRequest';
 import { createThunk, handleThunks } from 'Store/thunks';
 import episodeEntities from 'Episode/episodeEntities';
 import createFetchHandler from './Creators/createFetchHandler';
@@ -31,6 +31,7 @@ export const defaultState = {
 //
 // Actions Types
 
+export const FETCH_EPISODE_FILE = 'episodeFiles/fetchEpisodeFile';
 export const FETCH_EPISODE_FILES = 'episodeFiles/fetchEpisodeFiles';
 export const DELETE_EPISODE_FILE = 'episodeFiles/deleteEpisodeFile';
 export const DELETE_EPISODE_FILES = 'episodeFiles/deleteEpisodeFiles';
@@ -40,6 +41,7 @@ export const CLEAR_EPISODE_FILES = 'episodeFiles/clearEpisodeFiles';
 //
 // Action Creators
 
+export const fetchEpisodeFile = createThunk(FETCH_EPISODE_FILE);
 export const fetchEpisodeFiles = createThunk(FETCH_EPISODE_FILES);
 export const deleteEpisodeFile = createThunk(DELETE_EPISODE_FILE);
 export const deleteEpisodeFiles = createThunk(DELETE_EPISODE_FILES);
@@ -55,6 +57,7 @@ const deleteEpisodeFileHelper = createRemoveItemHandler(section, '/episodeFile')
 // Action Handlers
 
 export const actionHandlers = handleThunks({
+  [FETCH_EPISODE_FILE]: createFetchHandler(section, '/episodeFile'),
   [FETCH_EPISODE_FILES]: createFetchHandler(section, '/episodeFile'),
 
   [DELETE_EPISODE_FILE]: function(getState, payload, dispatch) {
@@ -90,12 +93,12 @@ export const actionHandlers = handleThunks({
 
     dispatch(set({ section, isDeleting: true }));
 
-    const promise = $.ajax({
+    const promise = createAjaxRequest({
       url: '/episodeFile/bulk',
       method: 'DELETE',
       dataType: 'json',
       data: JSON.stringify({ episodeFileIds })
-    });
+    }).request;
 
     promise.done(() => {
       const episodes = getState().episodes.items;
@@ -145,29 +148,34 @@ export const actionHandlers = handleThunks({
 
     dispatch(set({ section, isSaving: true }));
 
-    const data = {
+    const requestData = {
       episodeFileIds
     };
 
     if (language) {
-      data.language = language;
+      requestData.language = language;
     }
 
     if (quality) {
-      data.quality = quality;
+      requestData.quality = quality;
     }
 
-    const promise = $.ajax({
+    const promise = createAjaxRequest({
       url: '/episodeFile/editor',
       method: 'PUT',
       dataType: 'json',
-      data: JSON.stringify(data)
-    });
+      data: JSON.stringify(requestData)
+    }).request;
 
-    promise.done(() => {
+    promise.done((data) => {
       dispatch(batchActions([
         ...episodeFileIds.map((id) => {
           const props = {};
+
+          const episodeFile = data.find((file) => file.id === id);
+
+          props.qualityCutoffNotMet = episodeFile.qualityCutoffNotMet;
+          props.languageCutoffNotMet = episodeFile.languageCutoffNotMet;
 
           if (language) {
             props.language = language;

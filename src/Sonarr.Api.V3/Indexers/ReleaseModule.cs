@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using FluentValidation;
 using Nancy;
-using Nancy.ModelBinding;
 using NLog;
 using NzbDrone.Common.Cache;
 using NzbDrone.Common.Extensions;
@@ -15,7 +14,6 @@ using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Tv;
 using NzbDrone.Core.Validation;
-using Sonarr.Http.Extensions;
 using HttpStatusCode = System.Net.HttpStatusCode;
 
 namespace Sonarr.Api.V3.Indexers
@@ -55,17 +53,16 @@ namespace Sonarr.Api.V3.Indexers
             _parsingService = parsingService;
             _logger = logger;
 
-            GetResourceAll = GetReleases;
-            Post["/"] = x => DownloadRelease(this.Bind<ReleaseResource>());
-
-            PostValidator.RuleFor(s => s.DownloadAllowed).Equal(true);
             PostValidator.RuleFor(s => s.IndexerId).ValidId();
             PostValidator.RuleFor(s => s.Guid).NotEmpty();
+
+            GetResourceAll = GetReleases;
+            Post("/",  x => DownloadRelease(ReadResourceFromRequest()));
 
             _remoteEpisodeCache = cacheManager.GetCache<RemoteEpisode>(GetType(), "remoteEpisodes");
         }
 
-        private Response DownloadRelease(ReleaseResource release)
+        private object DownloadRelease(ReleaseResource release)
         {
             var remoteEpisode = _remoteEpisodeCache.Find(GetCacheKey(release));
 
@@ -102,19 +99,37 @@ namespace Sonarr.Api.V3.Indexers
                     }
                     else
                     {
-                            throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find matching series and episodes");
+                        throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find matching series and episodes");
                     }
+                }
+                else if (remoteEpisode.Episodes.Empty())
+                {
+                    var episodes = _parsingService.GetEpisodes(remoteEpisode.ParsedEpisodeInfo, remoteEpisode.Series, true);
+
+                    if (episodes.Empty() && release.EpisodeId.HasValue)
+                    {
+                        var episode = _episodeService.GetEpisode(release.EpisodeId.Value);
+
+                        episodes = new List<Episode>{episode};
+                    }
+
+                    remoteEpisode.Episodes = episodes;
+                }
+
+                if (remoteEpisode.Episodes.Empty())
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to parse episodes in the release");
                 }
 
                 _downloadService.DownloadReport(remoteEpisode);
             }
             catch (ReleaseDownloadException ex)
             {
-                _logger.ErrorException(ex.Message, ex);
+                _logger.Error(ex, ex.Message);
                 throw new NzbDroneClientException(HttpStatusCode.Conflict, "Getting release from indexer failed");
             }
 
-            return release.AsResponse();
+            return release;
         }
 
         private List<ReleaseResource> GetReleases()
@@ -141,12 +156,15 @@ namespace Sonarr.Api.V3.Indexers
 
                 return MapDecisions(prioritizedDecisions);
             }
+            catch (SearchFailedException ex)
+            {
+                throw new NzbDroneClientException(HttpStatusCode.BadRequest, ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Episode search failed: " + ex.Message);
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
             }
-
-            return new List<ReleaseResource>();
         }
 
         private List<ReleaseResource> GetSeasonReleases(int seriesId, int seasonNumber)
@@ -158,12 +176,15 @@ namespace Sonarr.Api.V3.Indexers
 
                 return MapDecisions(prioritizedDecisions);
             }
+            catch (SearchFailedException ex)
+            {
+                throw new NzbDroneClientException(HttpStatusCode.BadRequest, ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Season search failed: " + ex.Message);
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
             }
-
-            return new List<ReleaseResource>();
         }
 
         private List<ReleaseResource> GetRss()

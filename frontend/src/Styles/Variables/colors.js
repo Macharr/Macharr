@@ -1,6 +1,7 @@
 const sonarrBlue = '#35c5f4';
 
 module.exports = {
+  textColor: '#515253',
   defaultColor: '#333',
   disabledColor: '#999',
   dimColor: '#555',
@@ -61,7 +62,8 @@ module.exports = {
   inputErrorBoxShadowColor: 'rgba(240, 80, 80, 0.6)',
   inputWarningBorderColor: '#ffa500',
   inputWarningBoxShadowColor: 'rgba(255, 165, 0, 0.6)',
-  colorImpairedGradient: '#fcfcfc',
+  colorImpairedGradient: '#ffffff',
+  colorImpairedGradientDark: '#f4f5f6',
 
   //
   // Buttons
@@ -162,7 +164,7 @@ module.exports = {
   popoverTitleBackgroundColor: '#f7f7f7',
   popoverTitleBorderColor: '#ebebeb',
   popoverShadowColor: 'rgba(0, 0, 0, 0.2)',
-  popoverArrowBorderColor: 'rgba(0, 0, 0, 0.25)',
+  popoverArrowBorderColor: '#fff',
 
   popoverTitleBackgroundInverseColor: '#3a3f51',
   popoverTitleBorderInverseColor: '#4f566f',
@@ -173,6 +175,8 @@ module.exports = {
   // Calendar
 
   calendarTodayBackgroundColor: '#ddd',
+  calendarBorderColor: '#cecece',
+  calendarTextDim: '#666',
 
   //
   // Table

@@ -27,7 +27,7 @@
 }
 
 .expandButton {
-  composes: link from 'Components/Link/Link.css';
+  composes: link from '~Components/Link/Link.css';
 
   flex-grow: 1;
   margin: 0 20px;
@@ -46,13 +46,13 @@
 }
 
 .actionsMenu {
-  composes: menu from 'Components/Menu/Menu.css';
+  composes: menu from '~Components/Menu/Menu.css';
 
   flex: 0 0 45px;
 }
 
 .actionsMenuContent {
-  composes: menuContent from 'Components/Menu/MenuContent.css';
+  composes: menuContent from '~Components/Menu/MenuContent.css';
 
   white-space: nowrap;
   font-size: $defaultFontSize;
@@ -63,7 +63,7 @@
 }
 
 .actionButton {
-  composes: button from 'Components/Link/IconButton.css';
+  composes: button from '~Components/Link/IconButton.css';
 
   width: 30px;
 }
@@ -74,13 +74,19 @@
 }
 
 .collapseButtonContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 15px;
   width: 100%;
   border-top: 1px solid $borderColor;
   border-bottom-right-radius: 4px;
   border-bottom-left-radius: 4px;
   background-color: #fafafa;
-  text-align: center;
+}
+
+.collapseButtonIcon {
+  margin-bottom: -4px;
 }
 
 .expandButtonIcon {
@@ -90,7 +96,7 @@
   top: 50%;
   left: 50%;
   margin-top: -12px;
-  margin-left: -15px;
+  margin-left: -12px;
 }
 
 .noEpisodes {

@@ -1,18 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FluentValidation;
-using Nancy;
-using Nancy.ModelBinding;
 using NLog;
-using NzbDrone.Api.Extensions;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
-using Sonarr.Http.Extensions;
-using Sonarr.Http.Mapping;
 
 namespace NzbDrone.Api.Indexers
 {
@@ -33,7 +28,7 @@ namespace NzbDrone.Api.Indexers
             _indexerFactory = indexerFactory;
             _logger = logger;
 
-            Post["/push"] = x => ProcessRelease(this.Bind<ReleaseResource>());
+            Post("/push",  x => ProcessRelease(ReadResourceFromRequest()));
 
             PostValidator.RuleFor(s => s.Title).NotEmpty();
             PostValidator.RuleFor(s => s.DownloadUrl).NotEmpty();
@@ -41,7 +36,7 @@ namespace NzbDrone.Api.Indexers
             PostValidator.RuleFor(s => s.PublishDate).NotEmpty();
         }
 
-        private Response ProcessRelease(ReleaseResource release)
+        private object ProcessRelease(ReleaseResource release)
         {
             _logger.Info("Release pushed: {0} - {1}", release.Title, release.DownloadUrl);
 
@@ -54,7 +49,7 @@ namespace NzbDrone.Api.Indexers
             var decisions = _downloadDecisionMaker.GetRssDecision(new List<ReleaseInfo> { info });
             _downloadDecisionProcessor.ProcessDecisions(decisions);
 
-            return MapDecisions(decisions).First().AsResponse();
+            return MapDecisions(decisions).First();
         }
 
         private void ResolveIndexer(ReleaseInfo release)
@@ -69,7 +64,7 @@ namespace NzbDrone.Api.Indexers
                 }
                 else
                 {
-                    _logger.Debug("Push Release {0} not associated with unknown indexer {1}.", release.Title, release.Indexer);
+                    _logger.Debug("Push Release {0} not associated with known indexer {1}.", release.Title, release.Indexer);
                 }
             }
             else if (release.IndexerId != 0 && release.Indexer.IsNullOrWhiteSpace())
@@ -82,7 +77,7 @@ namespace NzbDrone.Api.Indexers
                 }
                 catch (ModelNotFoundException)
                 {
-                    _logger.Debug("Push Release {0} not associated with unknown indexer {0}.", release.Title, release.IndexerId);
+                    _logger.Debug("Push Release {0} not associated with known indexer {0}.", release.Title, release.IndexerId);
                     release.IndexerId = 0;
                 }
             }

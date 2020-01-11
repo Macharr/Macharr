@@ -20,14 +20,36 @@ namespace NzbDrone.Common.Test.DiskTests
         private readonly string _tempTargetPath = @"C:\target\my.video.mkv.partial~".AsOsAgnostic();
         private readonly string _nfsFile = ".nfs01231232";
 
+        private MockMount _sourceMount;
+        private MockMount _targetMount;
+
         [SetUp]
         public void SetUp()
         {
             Mocker.GetMock<IDiskProvider>(MockBehavior.Strict);
 
+            _sourceMount = new MockMount()
+            {
+                Name = "source",
+                RootDirectory = @"C:\source".AsOsAgnostic()
+            };
+            _targetMount = new MockMount()
+            {
+                Name = "target",
+                RootDirectory = @"C:\target".AsOsAgnostic()
+            };
+
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.GetMount(It.IsAny<string>()))
                 .Returns((IMount)null);
+
+            Mocker.GetMock<IDiskProvider>()
+                .Setup(v => v.GetMount(It.Is<string>(p => p.StartsWith(_sourceMount.RootDirectory))))
+                .Returns(_sourceMount);
+
+            Mocker.GetMock<IDiskProvider>()
+                .Setup(v => v.GetMount(It.Is<string>(p => p.StartsWith(_targetMount.RootDirectory))))
+                .Returns(_targetMount);
 
             WithEmulatedDiskProvider();
 
@@ -48,6 +70,30 @@ namespace NzbDrone.Common.Test.DiskTests
             WindowsOnly();
 
             Subject.VerificationMode.Should().Be(DiskTransferVerificationMode.VerifyOnly);
+
+            var result = Subject.TransferFile(_sourcePath, _targetPath, TransferMode.Move);
+
+            Mocker.GetMock<IDiskProvider>()
+                .Verify(v => v.TryCreateHardLink(_sourcePath, _backupPath), Times.Never());
+
+            Mocker.GetMock<IDiskProvider>()
+                .Verify(v => v.MoveFile(_sourcePath, _targetPath, false), Times.Once());
+        }
+
+        [TestCase("fuse.mergerfs", "")]
+        [TestCase("fuse.rclone", "")]
+        [TestCase("mergerfs", "")]
+        [TestCase("rclone", "")]
+        [TestCase("", "fuse.mergerfs")]
+        [TestCase("", "fuse.rclone")]
+        [TestCase("", "mergerfs")]
+        [TestCase("", "rclone")]
+        public void should_not_use_verified_transfer_on_specific_filesystems(string fsSource, string fsTarget)
+        {
+            MonoOnly();
+
+            _sourceMount.DriveFormat = fsSource;
+            _targetMount.DriveFormat = fsTarget;
 
             var result = Subject.TransferFile(_sourcePath, _targetPath, TransferMode.Move);
 
@@ -616,6 +662,7 @@ namespace NzbDrone.Common.Test.DiskTests
         }
 
         [Test]
+        [Retry(5)]
         public void CopyFolder_should_copy_folder()
         {
             WithRealDiskProvider();
@@ -988,6 +1035,9 @@ namespace NzbDrone.Common.Test.DiskTests
             Mocker.GetMock<IDiskProvider>()
                .Setup(v => v.GetFileInfos(It.IsAny<string>()))
                .Returns(new List<FileInfo>());
+
+            Mocker.GetMock<IDiskProvider>()
+                .Setup(v => v.CopyPermissions(It.IsAny<string>(), It.IsAny<string>(), false));
         }
 
         private void WithRealDiskProvider()
@@ -1042,6 +1092,9 @@ namespace NzbDrone.Common.Test.DiskTests
             Mocker.GetMock<IDiskProvider>()
                 .Setup(v => v.OpenReadStream(It.IsAny<string>()))
                 .Returns<string>(s => new FileStream(s, FileMode.Open, FileAccess.Read));
+
+            Mocker.GetMock<IDiskProvider>()
+                .Setup(v => v.CopyPermissions(It.IsAny<string>(), It.IsAny<string>(), false));
         }
 
         private void WithMockMount(string root)

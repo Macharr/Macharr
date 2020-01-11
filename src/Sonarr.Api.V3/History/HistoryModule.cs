@@ -30,9 +30,9 @@ namespace Sonarr.Api.V3.History
             _failedDownloadService = failedDownloadService;
             GetResourcePaged = GetHistory;
 
-            Get["/since"] = x => GetHistorySince();
-            Get["/series"] = x => GetSeriesHistory();
-            Post["/failed"] = x => MarkAsFailed();
+            Get("/since",  x => GetHistorySince());
+            Get("/series",  x => GetSeriesHistory());
+            Post("/failed",  x => MarkAsFailed());
         }
 
         protected HistoryResource MapToResource(NzbDrone.Core.History.History model, bool includeSeries, bool includeEpisode)
@@ -66,6 +66,7 @@ namespace Sonarr.Api.V3.History
 
             var eventTypeFilter = pagingResource.Filters.FirstOrDefault(f => f.Key == "eventType");
             var episodeIdFilter = pagingResource.Filters.FirstOrDefault(f => f.Key == "episodeId");
+            var downloadIdFilter = pagingResource.Filters.FirstOrDefault(f => f.Key == "downloadId");
 
             if (eventTypeFilter != null)
             {
@@ -77,6 +78,12 @@ namespace Sonarr.Api.V3.History
             {
                 var episodeId = Convert.ToInt32(episodeIdFilter.Value);
                 pagingSpec.FilterExpressions.Add(h => h.EpisodeId == episodeId);
+            }
+            
+            if (downloadIdFilter != null)
+            {
+                var downloadId = downloadIdFilter.Value;
+                pagingSpec.FilterExpressions.Add(h => h.DownloadId == downloadId);
             }
 
             return ApplyToPage(_historyService.Paged, pagingSpec, h => MapToResource(h, includeSeries, includeEpisode));
@@ -136,11 +143,11 @@ namespace Sonarr.Api.V3.History
             return _historyService.GetBySeries(seriesId, eventType).Select(h => MapToResource(h, includeSeries, includeEpisode)).ToList();
         }
 
-        private Response MarkAsFailed()
+        private object MarkAsFailed()
         {
             var id = (int)Request.Form.Id;
             _failedDownloadService.MarkAsFailed(id);
-            return new object().AsResponse();
+            return new object();
         }
     }
 }

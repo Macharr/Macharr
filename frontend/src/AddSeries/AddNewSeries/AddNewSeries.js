@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { icons } from 'Helpers/Props';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
+import { icons, kinds } from 'Helpers/Props';
 import Button from 'Components/Link/Button';
 import Link from 'Components/Link/Link';
 import Icon from 'Components/Icon';
@@ -78,7 +79,8 @@ class AddNewSeries extends Component {
   render() {
     const {
       error,
-      items
+      items,
+      hasExistingSeries
     } = this.props;
 
     const term = this.state.term;
@@ -121,8 +123,13 @@ class AddNewSeries extends Component {
           }
 
           {
-            !isFetching && !!error &&
-              <div>Failed to load search results, please try again.</div>
+            !isFetching && !!error ?
+              <div className={styles.message}>
+                <div className={styles.helpText}>
+                  Failed to load search results, please try again.
+                </div>
+                <div>{getErrorMessage(error)}</div>
+              </div> : null
           }
 
           {
@@ -155,11 +162,32 @@ class AddNewSeries extends Component {
           }
 
           {
-            !term &&
+            term ?
+              null :
               <div className={styles.message}>
-                <div className={styles.helpText}>It's easy to add a new series, just start typing the name the series you want to add.</div>
+                <div className={styles.helpText}>
+                  It's easy to add a new series, just start typing the name the series you want to add.
+                </div>
                 <div>You can also search using TVDB ID of a show. eg. tvdb:71663</div>
               </div>
+          }
+
+          {
+            !term && !hasExistingSeries ?
+              <div className={styles.message}>
+                <div className={styles.noSeriesText}>
+                  You haven't added any series yet, do you want to import some or all of your series first?
+                </div>
+                <div>
+                  <Button
+                    to="/add/import"
+                    kind={kinds.PRIMARY}
+                  >
+                    Import Existing Series
+                  </Button>
+                </div>
+              </div> :
+              null
           }
 
           <div />
@@ -176,6 +204,7 @@ AddNewSeries.propTypes = {
   isAdding: PropTypes.bool.isRequired,
   addError: PropTypes.object,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  hasExistingSeries: PropTypes.bool.isRequired,
   onSeriesLookupChange: PropTypes.func.isRequired,
   onClearSeriesLookup: PropTypes.func.isRequired
 };

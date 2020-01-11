@@ -10,13 +10,15 @@ import AddNewSeries from './AddNewSeries';
 function createMapStateToProps() {
   return createSelector(
     (state) => state.addSeries,
-    (state) => state.routing.location,
-    (addSeries, location) => {
+    (state) => state.series.items.length,
+    (state) => state.router.location,
+    (addSeries, existingSeriesCount, location) => {
       const { params } = parseUrl(location.search);
 
       return {
+        ...addSeries,
         term: params.term,
-        ...addSeries
+        hasExistingSeries: existingSeriesCount > 0
       };
     }
   );

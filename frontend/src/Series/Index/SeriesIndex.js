@@ -22,7 +22,7 @@ import SeriesIndexOverviewsConnector from './Overview/SeriesIndexOverviewsConnec
 import SeriesIndexFilterMenu from './Menus/SeriesIndexFilterMenu';
 import SeriesIndexSortMenu from './Menus/SeriesIndexSortMenu';
 import SeriesIndexViewMenu from './Menus/SeriesIndexViewMenu';
-import SeriesIndexFooter from './SeriesIndexFooter';
+import SeriesIndexFooterConnector from './SeriesIndexFooterConnector';
 import styles from './SeriesIndex.css';
 
 function getViewComponent(view) {
@@ -320,15 +320,17 @@ class SeriesIndex extends Component {
                 <div className={styles.contentBodyContainer}>
                   <ViewComponent
                     contentBody={contentBody}
+                    items={items}
+                    filters={filters}
+                    sortKey={sortKey}
+                    sortDirection={sortDirection}
                     scrollTop={scrollTop}
                     jumpToCharacter={jumpToCharacter}
                     onRender={this.onRender}
                     {...otherProps}
                   />
 
-                  <SeriesIndexFooter
-                    series={items}
-                  />
+                  <SeriesIndexFooterConnector />
                 </div>
             }
 

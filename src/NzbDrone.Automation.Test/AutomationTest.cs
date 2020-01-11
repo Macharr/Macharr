@@ -31,7 +31,7 @@ namespace NzbDrone.Automation.Test
             LogManager.Configuration.LoggingRules.Add(new LoggingRule("*", NLog.LogLevel.Trace, consoleTarget));
         }
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void SmokeTestSetup()
         {
             driver = new FirefoxDriver();
@@ -45,7 +45,7 @@ namespace NzbDrone.Automation.Test
             var page = new PageBase(driver);
             page.WaitForNoSpinner();
 
-            driver.ExecuteScript("window.NzbDrone.NameViews = true;");
+            driver.ExecuteScript("window.Sonarr.NameViews = true;");
 
             GetPageErrors().Should().BeEmpty();
         }
@@ -56,7 +56,7 @@ namespace NzbDrone.Automation.Test
                 .Select(e => e.Text);
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void SmokeTestTearDown()
         {
             _runner.KillAll();

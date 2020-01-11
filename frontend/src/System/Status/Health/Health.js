@@ -26,6 +26,7 @@ function getInternalLink(source) {
         />
       );
     case 'DownloadClientCheck':
+    case 'DownloadClientStatusCheck':
     case 'ImportMechanismCheck':
       return (
         <IconButton
@@ -37,7 +38,7 @@ function getInternalLink(source) {
     case 'RootFolderCheck':
       return (
         <IconButton
-          name={icons.SERIES}
+          name={icons.SERIES_CONTINUING}
           title="Series Editor"
           to="/serieseditor"
         />
@@ -67,6 +68,7 @@ function getTestLink(source, props) {
         />
       );
     case 'DownloadClientCheck':
+    case 'DownloadClientStatusCheck':
       return (
         <SpinnerIconButton
           name={icons.TEST}
@@ -152,12 +154,26 @@ class Health extends Component {
                     const internalLink = getInternalLink(item.source);
                     const testLink = getTestLink(item.source, this.props);
 
+                    let kind = kinds.WARNING;
+                    switch (item.type.toLowerCase()) {
+                      case 'error':
+                        kind = kinds.DANGER;
+                        break;
+                      default:
+                      case 'warning':
+                        kind = kinds.WARNING;
+                        break;
+                      case 'notice':
+                        kind = kinds.INFO;
+                        break;
+                    }
+
                     return (
                       <TableRow key={`health${item.message}`}>
                         <TableRowCell>
                           <Icon
                             name={icons.DANGER}
-                            kind={item.type.toLowerCase() === 'error' ? kinds.DANGER : kinds.WARNING}
+                            kind={kind}
                             title={titleCase(item.type)}
                           />
                         </TableRowCell>

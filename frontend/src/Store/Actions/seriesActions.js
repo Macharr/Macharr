@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import $ from 'jquery';
 import { createAction } from 'redux-actions';
 import { batchActions } from 'redux-batched-actions';
+import createAjaxRequest from 'Utilities/createAjaxRequest';
 import dateFilterPredicate from 'Utilities/Date/dateFilterPredicate';
 import { filterTypePredicates, filterTypes, sortDirections } from 'Helpers/Props';
 import { createThunk, handleThunks } from 'Store/thunks';
@@ -17,7 +17,7 @@ import { updateItem } from './baseActions';
 
 const MONITOR_TIMEOUT = 1000;
 const seasonsToUpdate = {};
-let seasonMonitorToggleTimeout = null;
+const seasonMonitorToggleTimeouts = {};
 
 //
 // Variables
@@ -203,7 +203,7 @@ export const toggleSeasonMonitored = createThunk(TOGGLE_SEASON_MONITORED);
 
 export const setSeriesValue = createAction(SET_SERIES_VALUE, (payload) => {
   return {
-    section: 'series',
+    section,
     ...payload
   };
 });
@@ -242,7 +242,7 @@ export const actionHandlers = handleThunks({
       isSaving: true
     }));
 
-    const promise = $.ajax({
+    const promise = createAjaxRequest({
       url: `/series/${id}`,
       method: 'PUT',
       data: JSON.stringify({
@@ -250,7 +250,7 @@ export const actionHandlers = handleThunks({
         monitored
       }),
       dataType: 'json'
-    });
+    }).request;
 
     promise.done((data) => {
       dispatch(updateItem({
@@ -271,15 +271,18 @@ export const actionHandlers = handleThunks({
   },
 
   [TOGGLE_SEASON_MONITORED]: function(getState, payload, dispatch) {
-    if (seasonMonitorToggleTimeout) {
-      seasonMonitorToggleTimeout = clearTimeout(seasonMonitorToggleTimeout);
-    }
-
     const {
       seriesId: id,
       seasonNumber,
       monitored
     } = payload;
+
+    const seasonMonitorToggleTimeout = seasonMonitorToggleTimeouts[id];
+
+    if (seasonMonitorToggleTimeout) {
+      clearTimeout(seasonMonitorToggleTimeout);
+      delete seasonMonitorToggleTimeouts[id];
+    }
 
     const series = getState().series.items.find((s) => s.id === id);
     const seasons = _.cloneDeep(series.seasons);
@@ -296,8 +299,8 @@ export const actionHandlers = handleThunks({
     seasonsToUpdate[seasonNumber] = monitored;
     season.monitored = monitored;
 
-    seasonMonitorToggleTimeout = setTimeout(() => {
-      $.ajax({
+    seasonMonitorToggleTimeouts[id] = setTimeout(() => {
+      createAjaxRequest({
         url: `/series/${id}`,
         method: 'PUT',
         data: JSON.stringify({
@@ -305,7 +308,7 @@ export const actionHandlers = handleThunks({
           seasons
         }),
         dataType: 'json'
-      }).then(
+      }).request.then(
         (data) => {
           const changedSeasons = [];
 

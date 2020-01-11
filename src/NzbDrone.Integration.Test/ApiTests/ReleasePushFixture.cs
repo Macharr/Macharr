@@ -1,7 +1,6 @@
 ﻿using FluentAssertions;
 using NUnit.Framework;
 using NzbDrone.Api.Indexers;
-using System.Linq;
 using System.Net;
 using System.Collections.Generic;
 using System;
@@ -18,10 +17,12 @@ namespace NzbDrone.Integration.Test.ApiTests
             var body = new Dictionary<string, object>();
             body.Add("guid", "sdfsdfsdf");
             body.Add("title", "The.Series.S01E01");
+            body.Add("protocol", "Torrent");
+            body.Add("downloadUrl", "https://sonarr.tv/test.torrent");
             body.Add("publishDate", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ssZ", CultureInfo.InvariantCulture));
 
             var request = ReleasePush.BuildRequest();
-            request.AddBody(body);
+            request.AddJsonBody(body);
             var result = ReleasePush.Post<ReleaseResource>(request, HttpStatusCode.OK);
 
             result.Should().NotBeNull();

@@ -1,11 +1,11 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import padNumber from 'Utilities/Number/padNumber';
-import Label from 'Components/Label';
 import RelativeDateCellConnector from 'Components/Table/Cells/RelativeDateCellConnector';
 import TableRow from 'Components/Table/TableRow';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableSelectCell from 'Components/Table/Cells/TableSelectCell';
+import EpisodeLanguage from 'Episode/EpisodeLanguage';
 import EpisodeQuality from 'Episode/EpisodeQuality';
 import styles from './EpisodeFileEditorRow';
 
@@ -20,6 +20,8 @@ function EpisodeFileEditorRow(props) {
     airDateUtc,
     language,
     quality,
+    qualityCutoffNotMet,
+    languageCutoffNotMet,
     isSelected,
     onSelectedChange
   } = props;
@@ -52,14 +54,16 @@ function EpisodeFileEditorRow(props) {
       />
 
       <TableRowCell>
-        <Label>
-          {language.name}
-        </Label>
+        <EpisodeLanguage
+          language={language}
+          isCutoffNotMet={languageCutoffNotMet}
+        />
       </TableRowCell>
 
       <TableRowCell>
         <EpisodeQuality
           quality={quality}
+          isCutoffNotMet={qualityCutoffNotMet}
         />
       </TableRowCell>
     </TableRow>
@@ -76,6 +80,8 @@ EpisodeFileEditorRow.propTypes = {
   airDateUtc: PropTypes.string.isRequired,
   language: PropTypes.object.isRequired,
   quality: PropTypes.object.isRequired,
+  qualityCutoffNotMet: PropTypes.bool.isRequired,
+  languageCutoffNotMet: PropTypes.bool.isRequired,
   isSelected: PropTypes.bool,
   onSelectedChange: PropTypes.func.isRequired
 };

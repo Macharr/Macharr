@@ -3,11 +3,10 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
-import { isCommandExecuting } from 'Utilities/Command';
 import createSeriesSelector from 'Store/Selectors/createSeriesSelector';
-import createCommandsSelector from 'Store/Selectors/createCommandsSelector';
-import createQualityProfileSelector from 'Store/Selectors/createQualityProfileSelector';
-import createLanguageProfileSelector from 'Store/Selectors/createLanguageProfileSelector';
+import createExecutingCommandsSelector from 'Store/Selectors/createExecutingCommandsSelector';
+import createSeriesQualityProfileSelector from 'Store/Selectors/createSeriesQualityProfileSelector';
+import createSeriesLanguageProfileSelector from 'Store/Selectors/createSeriesLanguageProfileSelector';
 import { executeCommand } from 'Store/Actions/commandActions';
 import * as commandNames from 'Commands/commandNames';
 
@@ -32,30 +31,38 @@ function selectShowSearchAction() {
 function createMapStateToProps() {
   return createSelector(
     createSeriesSelector(),
-    createQualityProfileSelector(),
-    createLanguageProfileSelector(),
+    createSeriesQualityProfileSelector(),
+    createSeriesLanguageProfileSelector(),
     selectShowSearchAction(),
-    createCommandsSelector(),
+    createExecutingCommandsSelector(),
     (
       series,
       qualityProfile,
       languageProfile,
       showSearchAction,
-      commands
+      executingCommands
     ) => {
-      const isRefreshingSeries = commands.some((command) => {
+
+      // If a series is deleted this selector may fire before the parent
+      // selecors, which will result in an undefined series, if that happens
+      // we want to return early here and again in the render function to avoid
+      // trying to show a series that has no information available.
+
+      if (!series) {
+        return {};
+      }
+
+      const isRefreshingSeries = executingCommands.some((command) => {
         return (
           command.name === commandNames.REFRESH_SERIES &&
-          command.body.seriesId === series.id &&
-          isCommandExecuting(command)
+          command.body.seriesId === series.id
         );
       });
 
-      const isSearchingSeries = commands.some((command) => {
+      const isSearchingSeries = executingCommands.some((command) => {
         return (
           command.name === commandNames.SERIES_SEARCH &&
-          command.body.seriesId === series.id &&
-          isCommandExecuting(command)
+          command.body.seriesId === series.id
         );
       });
 
@@ -75,7 +82,7 @@ function createMapStateToProps() {
 }
 
 const mapDispatchToProps = {
-  executeCommand
+  dispatchExecuteCommand: executeCommand
 };
 
 class SeriesIndexItemConnector extends Component {
@@ -84,14 +91,14 @@ class SeriesIndexItemConnector extends Component {
   // Listeners
 
   onRefreshSeriesPress = () => {
-    this.props.executeCommand({
+    this.props.dispatchExecuteCommand({
       name: commandNames.REFRESH_SERIES,
       seriesId: this.props.id
     });
   }
 
   onSearchPress = () => {
-    this.props.executeCommand({
+    this.props.dispatchExecuteCommand({
       name: commandNames.SERIES_SEARCH,
       seriesId: this.props.id
     });
@@ -102,13 +109,19 @@ class SeriesIndexItemConnector extends Component {
 
   render() {
     const {
+      id,
       component: ItemComponent,
       ...otherProps
     } = this.props;
 
+    if (!id) {
+      return null;
+    }
+
     return (
       <ItemComponent
         {...otherProps}
+        id={id}
         onRefreshSeriesPress={this.onRefreshSeriesPress}
         onSearchPress={this.onSearchPress}
       />
@@ -117,9 +130,9 @@ class SeriesIndexItemConnector extends Component {
 }
 
 SeriesIndexItemConnector.propTypes = {
-  id: PropTypes.number.isRequired,
-  component: PropTypes.func.isRequired,
-  executeCommand: PropTypes.func.isRequired
+  id: PropTypes.number,
+  component: PropTypes.elementType.isRequired,
+  dispatchExecuteCommand: PropTypes.func.isRequired
 };
 
 export default connect(createMapStateToProps, mapDispatchToProps)(SeriesIndexItemConnector);

@@ -130,7 +130,7 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
         protected override void Test(List<ValidationFailure> failures)
         {
             failures.AddIfNotNull(TestConnection());
-            if (failures.Any()) return;
+            if (failures.HasErrors()) return;
             failures.AddIfNotNull(TestGetTorrents());
         }
 
@@ -160,7 +160,7 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
             }
             catch (DownloadClientAuthenticationException ex)
             {
-                _logger.ErrorException(ex.Message, ex);
+                _logger.Error(ex, ex.Message);
 
                 return new NzbDroneValidationFailure("Password", "Authentication failed");
             }
@@ -176,7 +176,7 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
             }
             catch (Exception ex)
             {
-                _logger.ErrorException(ex.Message, ex);
+                _logger.Error(ex, ex.Message);
                 return new NzbDroneValidationFailure(String.Empty, "Failed to get the list of torrents: " + ex.Message);
             }
 

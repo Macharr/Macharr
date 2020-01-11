@@ -11,6 +11,7 @@ using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Core.Tv;
+using NzbDrone.Test.Common;
 
 namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 {
@@ -231,6 +232,28 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             Subject.BuildFileName(new List<Episode> {_episode1}, _series, _episodeFile)
                    .Should().Be("South Park - S15E06 - City Sushi [HDTV-720p]");
         }
+        
+        [TestCase("Some Escaped {{ String", "Some Escaped { String")]
+        [TestCase("Some Escaped }} String", "Some Escaped } String")]
+        [TestCase("Some Escaped {{Series Title}} String", "Some Escaped {Series Title} String")]
+        [TestCase("Some Escaped {{{Series Title}}} String", "Some Escaped {South Park} String")]
+        public void should_escape_token_in_format(string format, string expected)
+        {
+            _namingConfig.StandardEpisodeFormat = format;
+
+            Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
+                   .Should().Be(expected);
+        }
+
+        [Test]
+        public void should_escape_token_in_title()
+        {
+            _namingConfig.StandardEpisodeFormat = "Some Unescaped {Series Title} String";
+            _series.Title = "My {Quality Full} Title";
+
+            Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
+                   .Should().Be("Some Unescaped My {Quality Full} Title String");
+        }
 
         [Test]
         public void use_file_name_when_sceneName_is_null()
@@ -438,7 +461,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             _namingConfig.AnimeEpisodeFormat = "{Series.Title}.{season}x{episode:00}.{absolute:000}\\{Series.Title}.S{season:00}E{episode:00}.{absolute:00}.{Episode.Title}";
 
             Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
-                   .Should().Be("South.Park.15x06.100\\South.Park.S15E06.100.City.Sushi");
+                   .Should().Be("South.Park.15x06.100\\South.Park.S15E06.100.City.Sushi".AsOsAgnostic());
         }
 
         [Test]
@@ -448,7 +471,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             _namingConfig.AnimeEpisodeFormat = "{Series Title} Season {season:0000} Episode {episode:0000}\\{Series.Title}.S{season:00}E{episode:00}.{absolute:00}.{Episode.Title}";
 
             Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
-                   .Should().Be("South Park Season 0015 Episode 0006\\South.Park.S15E06.100.City.Sushi");
+                   .Should().Be("South Park Season 0015 Episode 0006\\South.Park.S15E06.100.City.Sushi".AsOsAgnostic());
         }
 
         [Test]
@@ -741,6 +764,38 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
                    .Should().Be(releaseGroup);
         }
 
+        [TestCase("English", "")]
+        [TestCase("English/German", "[EN+DE]")]
+        public void should_format_audio_languages(string audioLanguages, string expected)
+        {
+            _episodeFile.ReleaseGroup = null;
+
+            GivenMediaInfoModel(audioLanguages: audioLanguages);
+
+
+            _namingConfig.StandardEpisodeFormat = "{MediaInfo AudioLanguages}";
+
+
+            Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
+                   .Should().Be(expected);
+        }
+
+        [TestCase("English", "[EN]")]
+        [TestCase("English/German", "[EN+DE]")]
+        public void should_format_audio_languages_all(string audioLanguages, string expected)
+        {
+            _episodeFile.ReleaseGroup = null;
+
+            GivenMediaInfoModel(audioLanguages: audioLanguages);
+
+
+            _namingConfig.StandardEpisodeFormat = "{MediaInfo AudioLanguagesAll}";
+
+
+            Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile)
+                   .Should().Be(expected);
+        }
+
         [TestCase(8, "BT.601 NTSC", "BT.709", "South.Park.S15E06.City.Sushi")]
         [TestCase(10, "BT.2020", "PQ", "South.Park.S15E06.City.Sushi.HDR")]
         [TestCase(10, "BT.2020", "HLG", "South.Park.S15E06.City.Sushi.HDR")]
@@ -768,6 +823,20 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             Subject.BuildFileName(new List<Episode> {_episode1}, _series, _episodeFile);
 
             Mocker.GetMock<IUpdateMediaInfo>().Verify(v => v.Update(_episodeFile, _series), Times.Once());
+        }
+
+        [Test]
+        public void should_not_update_media_info_if_no_series_path_available()
+        {
+            _namingConfig.StandardEpisodeFormat =
+                "{Series.Title}.S{season:00}E{episode:00}.{Episode.Title}.{MediaInfo VideoDynamicRange}";
+
+            GivenMediaInfoModel(schemaRevision: 3);
+            _series.Path = null;
+
+            Subject.BuildFileName(new List<Episode> { _episode1 }, _series, _episodeFile);
+
+            Mocker.GetMock<IUpdateMediaInfo>().Verify(v => v.Update(_episodeFile, _series), Times.Never());
         }
 
         [Test]

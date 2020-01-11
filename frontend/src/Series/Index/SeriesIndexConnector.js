@@ -2,11 +2,10 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
-import createClientSideCollectionSelector from 'Store/Selectors/createClientSideCollectionSelector';
+import createSeriesClientSideCollectionItemsSelector from 'Store/Selectors/createSeriesClientSideCollectionItemsSelector';
 import dimensions from 'Styles/Variables/dimensions';
 import createCommandExecutingSelector from 'Store/Selectors/createCommandExecutingSelector';
 import createDimensionsSelector from 'Store/Selectors/createDimensionsSelector';
-import { fetchSeries } from 'Store/Actions/seriesActions';
 import scrollPositions from 'Store/scrollPositions';
 import { setSeriesSort, setSeriesFilter, setSeriesView, setSeriesTableOption } from 'Store/Actions/seriesIndexActions';
 import { executeCommand } from 'Store/Actions/commandActions';
@@ -39,7 +38,7 @@ function getScrollTop(view, scrollTop, isSmallScreen) {
 
 function createMapStateToProps() {
   return createSelector(
-    createClientSideCollectionSelector('series', 'seriesIndex'),
+    createSeriesClientSideCollectionItemsSelector('seriesIndex'),
     createCommandExecutingSelector(commandNames.REFRESH_SERIES),
     createCommandExecutingSelector(commandNames.RSS_SYNC),
     createDimensionsSelector(),
@@ -61,10 +60,6 @@ function createMapStateToProps() {
 
 function createMapDispatchToProps(dispatch, props) {
   return {
-    dispatchFetchSeries() {
-      dispatch(fetchSeries);
-    },
-
     onTableOptionChange(payload) {
       dispatch(setSeriesTableOption(payload));
     },
@@ -114,10 +109,6 @@ class SeriesIndexConnector extends Component {
     };
   }
 
-  componentDidMount() {
-    this.props.dispatchFetchSeries();
-  }
-
   //
   // Listeners
 
@@ -155,7 +146,7 @@ SeriesIndexConnector.propTypes = {
   isSmallScreen: PropTypes.bool.isRequired,
   view: PropTypes.string.isRequired,
   scrollTop: PropTypes.number.isRequired,
-  dispatchFetchSeries: PropTypes.func.isRequired
+  dispatchSetSeriesView: PropTypes.func.isRequired
 };
 
 export default withScrollPosition(

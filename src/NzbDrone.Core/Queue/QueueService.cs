@@ -70,14 +70,16 @@ namespace NzbDrone.Core.Queue
                 Sizeleft = trackedDownload.DownloadItem.RemainingSize,
                 Timeleft = trackedDownload.DownloadItem.RemainingTime,
                 Status = trackedDownload.DownloadItem.Status.ToString(),
-                TrackedDownloadStatus = trackedDownload.Status.ToString(),
+                TrackedDownloadStatus = trackedDownload.Status,
+                TrackedDownloadState = trackedDownload.State,
                 StatusMessages = trackedDownload.StatusMessages.ToList(),
                 ErrorMessage = trackedDownload.DownloadItem.Message,
                 RemoteEpisode = trackedDownload.RemoteEpisode,
                 DownloadId = trackedDownload.DownloadItem.DownloadId,
                 Protocol = trackedDownload.Protocol,
                 DownloadClient = trackedDownload.DownloadItem.DownloadClient,
-                Indexer = trackedDownload.Indexer
+                Indexer = trackedDownload.Indexer,
+                OutputPath = trackedDownload.DownloadItem.OutputPath.ToString()
             };
 
             if (episode != null)

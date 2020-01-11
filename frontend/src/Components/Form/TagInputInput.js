@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { kinds } from 'Helpers/Props';
-import { tagShape } from './TagInput';
+import tagShape from 'Helpers/Props/Shapes/tagShape';
 import styles from './TagInputInput.css';
 
 class TagInputInput extends Component {
@@ -23,6 +23,7 @@ class TagInputInput extends Component {
 
   render() {
     const {
+      forwardedRef,
       className,
       tags,
       inputProps,
@@ -33,6 +34,7 @@ class TagInputInput extends Component {
 
     return (
       <div
+        ref={forwardedRef}
         className={className}
         component="div"
         onMouseDown={this.onMouseDown}
@@ -59,12 +61,13 @@ class TagInputInput extends Component {
 }
 
 TagInputInput.propTypes = {
+  forwardedRef: PropTypes.func,
   className: PropTypes.string.isRequired,
   tags: PropTypes.arrayOf(PropTypes.shape(tagShape)).isRequired,
   inputProps: PropTypes.object.isRequired,
   kind: PropTypes.oneOf(kinds.all).isRequired,
   isFocused: PropTypes.bool.isRequired,
-  tagComponent: PropTypes.func.isRequired,
+  tagComponent: PropTypes.elementType.isRequired,
   onTagDelete: PropTypes.func.isRequired,
   onInputContainerPress: PropTypes.func.isRequired
 };

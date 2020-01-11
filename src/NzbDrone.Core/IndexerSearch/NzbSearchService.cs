@@ -13,6 +13,7 @@ using NzbDrone.Core.Tv;
 using System.Linq;
 using NzbDrone.Common.TPL;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Exceptions;
 
 namespace NzbDrone.Core.IndexerSearch
 {
@@ -62,7 +63,8 @@ namespace NzbDrone.Core.IndexerSearch
             {
                 if (string.IsNullOrWhiteSpace(episode.AirDate))
                 {
-                    throw new InvalidOperationException("Daily episode is missing AirDate. Try to refresh series info.");
+                    _logger.Error("Daily episode is missing an air date. Try refreshing the series info.");
+                    throw new SearchFailedException("Air date is missing");
                 }
 
                 return SearchDaily(series, episode, userInvokedSearch, interactiveSearch);
@@ -191,9 +193,11 @@ namespace NzbDrone.Core.IndexerSearch
             return Dispatch(indexer => indexer.Fetch(searchSpec), searchSpec);
         }
 
-        private List<DownloadDecision> SearchAnime(Series series, Episode episode, bool userInvokedSearch, bool interactiveSearch)
+        private List<DownloadDecision> SearchAnime(Series series, Episode episode, bool userInvokedSearch, bool interactiveSearch, bool isSeasonSearch = false)
         {
             var searchSpec = Get<AnimeEpisodeSearchCriteria>(series, new List<Episode> { episode }, userInvokedSearch, interactiveSearch);
+
+            searchSpec.IsSeasonSearch = isSeasonSearch;
 
             if (episode.SceneAbsoluteEpisodeNumber.HasValue)
             {
@@ -205,7 +209,8 @@ namespace NzbDrone.Core.IndexerSearch
             }
             else
             {
-                throw new ArgumentOutOfRangeException("AbsoluteEpisodeNumber", $"Can not search for {series.Title} - S{episode.SeasonNumber:00}E{episode.EpisodeNumber:00} it does not have an absolute episode number");
+                _logger.Error($"Can not search for {series.Title} - S{episode.SeasonNumber:00}E{episode.EpisodeNumber:00} it does not have an absolute episode number");
+                throw new SearchFailedException("Absolute episode number is missing");
             }
 
             return Dispatch(indexer => indexer.Fetch(searchSpec), searchSpec);
@@ -226,9 +231,10 @@ namespace NzbDrone.Core.IndexerSearch
         {
             var downloadDecisions = new List<DownloadDecision>();
 
-            foreach (var episode in episodes.Where(e => e.Monitored))
+            // Only search for aired episodes when performing a season anime search
+            foreach (var episode in episodes.Where(e => e.Monitored && e.AirDateUtc.HasValue && e.AirDateUtc.Value.Before(DateTime.UtcNow)))
             {
-                downloadDecisions.AddRange(SearchAnime(series, episode, userInvokedSearch, interactiveSearch));
+                downloadDecisions.AddRange(SearchAnime(series, episode, userInvokedSearch, interactiveSearch, true));
             }
 
             return downloadDecisions;

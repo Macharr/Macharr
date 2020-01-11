@@ -43,11 +43,20 @@ namespace Sonarr.Http.Authentication
             else if (_configFileProvider.AuthenticationMethod == AuthenticationType.Basic)
             {
                 pipelines.EnableBasicAuthentication(new BasicAuthenticationConfiguration(_authenticationService, "Sonarr"));
+                pipelines.BeforeRequest.AddItemToStartOfPipeline(CaptureContext);
             }
 
             pipelines.BeforeRequest.AddItemToEndOfPipeline((Func<NancyContext, Response>)RequiresAuthentication);
             pipelines.AfterRequest.AddItemToEndOfPipeline((Action<NancyContext>)RemoveLoginHooksForApiCalls);
         }
+
+        private Response CaptureContext(NancyContext context)
+        {
+            _authenticationService.SetContext(context);
+
+            return null;
+        }
+
 
         private Response RequiresAuthentication(NancyContext context)
         {
@@ -55,6 +64,7 @@ namespace Sonarr.Http.Authentication
 
             if (!_authenticationService.IsAuthenticated(context))
             {
+                _authenticationService.LogUnauthorized(context);
                 response = new Response { StatusCode = HttpStatusCode.Unauthorized };
             }
 
@@ -66,7 +76,7 @@ namespace Sonarr.Http.Authentication
             FormsAuthentication.FormsAuthenticationCookieName = "SonarrAuth";
 
             var cryptographyConfiguration = new CryptographyConfiguration(
-                    new RijndaelEncryptionProvider(new PassphraseKeyGenerator(_configService.RijndaelPassphrase, Encoding.ASCII.GetBytes(_configService.RijndaelSalt))),
+                    new AesEncryptionProvider(new PassphraseKeyGenerator(_configService.RijndaelPassphrase, Encoding.ASCII.GetBytes(_configService.RijndaelSalt))),
                     new DefaultHmacProvider(new PassphraseKeyGenerator(_configService.HmacPassphrase, Encoding.ASCII.GetBytes(_configService.HmacSalt)))
                 );
 
@@ -89,7 +99,7 @@ namespace Sonarr.Http.Authentication
                      context.Response.Headers["Location"].StartsWith($"{_configFileProvider.UrlBase}/login", StringComparison.InvariantCultureIgnoreCase)) ||
                     context.Response.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    context.Response = new { Error = "Unauthorized" }.AsResponse(HttpStatusCode.Unauthorized);
+                    context.Response = new { Error = "Unauthorized" }.AsResponse(context, HttpStatusCode.Unauthorized);
                 }
             }
         }

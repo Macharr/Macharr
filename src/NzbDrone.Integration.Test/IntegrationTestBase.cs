@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -44,6 +45,7 @@ namespace NzbDrone.Integration.Test
         public ClientBase<HistoryResource> History;
         public ClientBase<HostConfigResource> HostConfig;
         public IndexerClient Indexers;
+        public LogsClient Logs;
         public ClientBase<NamingConfigResource> NamingConfig;
         public NotificationClient Notifications;
         public ClientBase<ProfileResource> Profiles;
@@ -105,6 +107,7 @@ namespace NzbDrone.Integration.Test
             History = new ClientBase<HistoryResource>(RestClient, ApiKey);
             HostConfig = new ClientBase<HostConfigResource>(RestClient, ApiKey, "config/host");
             Indexers = new IndexerClient(RestClient, ApiKey);
+            Logs = new LogsClient(RestClient, ApiKey);
             NamingConfig = new ClientBase<NamingConfigResource>(RestClient, ApiKey, "config/naming");
             Notifications = new NotificationClient(RestClient, ApiKey);
             Profiles = new ClientBase<ProfileResource>(RestClient, ApiKey);
@@ -126,7 +129,10 @@ namespace NzbDrone.Integration.Test
         [SetUp]
         public void IntegrationSetUp()
         {
-            TempDirectory = Path.Combine(TestContext.CurrentContext.TestDirectory, "_test_" + DateTime.UtcNow.Ticks);
+            TempDirectory = Path.Combine(TestContext.CurrentContext.TestDirectory, "_test_" + Process.GetCurrentProcess().Id + "_" + DateTime.UtcNow.Ticks);
+
+            // Wait for things to get quiet, otherwise the previous test might influence the current one.
+            Commands.WaitAll();
         }
 
         [TearDown]
@@ -146,6 +152,17 @@ namespace NzbDrone.Integration.Test
 
                 _signalrConnection = null;
                 _signalRReceived = new List<SignalRMessage>();
+            }
+
+            if (Directory.Exists(TempDirectory))
+            {
+                try
+                {
+                    Directory.Delete(TempDirectory, true);
+                }
+                catch
+                {
+                }
             }
         }
 

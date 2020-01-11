@@ -24,6 +24,8 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Fleming.S01.720p.WEBDL.DD5.1.H.264-NTb", "Fleming", 1)]
         [TestCase("Holmes.Makes.It.Right.S02.720p.HDTV.AAC5.1.x265-NOGRP", "Holmes Makes It Right", 2)]
         [TestCase("My.Series.S2014.720p.HDTV.x264-ME", "My Series", 2014)]
+        [TestCase("Velvet.Saison3.VOSTFR.HDTV.XviD-NOTAG", "Velvet", 3)]
+        [TestCase("Watatatov.SAISON.1.VFQ.PDTV.H264-ACC-ROLLED", "Watatatov", 1)]
         public void should_parse_full_season_release(string postTitle, string title, int season)
         {
             var result = Parser.Parser.ParseTitle(postTitle);
@@ -75,6 +77,19 @@ namespace NzbDrone.Core.Test.ParserTests
             result.FullSeason.Should().BeFalse();
             result.IsPartialSeason.Should().BeTrue();
             result.SeasonPart.Should().Be(seasonPart);
+        }
+
+        [TestCase("The Wire S01-05 WS BDRip X264-REWARD-No Rars", "The Wire", 1)]
+        public void should_parse_multi_season_release(string postTitle, string title, int firstSeason)
+        {
+            var result = Parser.Parser.ParseTitle(postTitle);
+            result.SeasonNumber.Should().Be(firstSeason);
+            result.SeriesTitle.Should().Be(title);
+            result.EpisodeNumbers.Should().BeEmpty();
+            result.AbsoluteEpisodeNumbers.Should().BeEmpty();
+            result.FullSeason.Should().BeTrue();
+            result.IsPartialSeason.Should().BeFalse();
+            result.IsMultiSeason.Should().BeTrue();
         }
     }
 }

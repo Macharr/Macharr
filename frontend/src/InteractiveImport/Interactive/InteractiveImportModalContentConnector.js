@@ -19,11 +19,11 @@ function createMapStateToProps() {
 }
 
 const mapDispatchToProps = {
-  fetchInteractiveImportItems,
-  setInteractiveImportSort,
-  setInteractiveImportMode,
-  clearInteractiveImport,
-  executeCommand
+  dispatchFetchInteractiveImportItems: fetchInteractiveImportItems,
+  dispatchSetInteractiveImportSort: setInteractiveImportSort,
+  dispatchSetInteractiveImportMode: setInteractiveImportMode,
+  dispatchClearInteractiveImport: clearInteractiveImport,
+  dispatchExecuteCommand: executeCommand
 };
 
 class InteractiveImportModalContentConnector extends Component {
@@ -43,6 +43,7 @@ class InteractiveImportModalContentConnector extends Component {
   componentDidMount() {
     const {
       downloadId,
+      seriesId,
       folder
     } = this.props;
 
@@ -50,8 +51,9 @@ class InteractiveImportModalContentConnector extends Component {
       filterExistingFiles
     } = this.state;
 
-    this.props.fetchInteractiveImportItems({
+    this.props.dispatchFetchInteractiveImportItems({
       downloadId,
+      seriesId,
       folder,
       filterExistingFiles
     });
@@ -65,11 +67,13 @@ class InteractiveImportModalContentConnector extends Component {
     if (prevState.filterExistingFiles !== filterExistingFiles) {
       const {
         downloadId,
+        seriesId,
         folder
       } = this.props;
 
-      this.props.fetchInteractiveImportItems({
+      this.props.dispatchFetchInteractiveImportItems({
         downloadId,
+        seriesId,
         folder,
         filterExistingFiles
       });
@@ -77,14 +81,14 @@ class InteractiveImportModalContentConnector extends Component {
   }
 
   componentWillUnmount() {
-    this.props.clearInteractiveImport();
+    this.props.dispatchClearInteractiveImport();
   }
 
   //
   // Listeners
 
   onSortPress = (sortKey, sortDirection) => {
-    this.props.setInteractiveImportSort({ sortKey, sortDirection });
+    this.props.dispatchSetInteractiveImportSort({ sortKey, sortDirection });
   }
 
   onFilterExistingFilesChange = (filterExistingFiles) => {
@@ -92,7 +96,7 @@ class InteractiveImportModalContentConnector extends Component {
   }
 
   onImportModeChange = (importMode) => {
-    this.props.setInteractiveImportMode({ importMode });
+    this.props.dispatchSetInteractiveImportMode({ importMode });
   }
 
   onImportSelectedPress = (selected, importMode) => {
@@ -139,7 +143,7 @@ class InteractiveImportModalContentConnector extends Component {
           path: item.path,
           folderName: item.folderName,
           seriesId: series.id,
-          episodeIds: _.map(episodes, 'id'),
+          episodeIds: episodes.map((e) => e.id),
           quality,
           language,
           downloadId: this.props.downloadId
@@ -151,7 +155,7 @@ class InteractiveImportModalContentConnector extends Component {
       return;
     }
 
-    this.props.executeCommand({
+    this.props.dispatchExecuteCommand({
       name: commandNames.INTERACTIVE_IMPORT,
       files,
       importMode
@@ -185,14 +189,15 @@ class InteractiveImportModalContentConnector extends Component {
 
 InteractiveImportModalContentConnector.propTypes = {
   downloadId: PropTypes.string,
+  seriesId: PropTypes.number,
   folder: PropTypes.string,
   filterExistingFiles: PropTypes.bool.isRequired,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
-  fetchInteractiveImportItems: PropTypes.func.isRequired,
-  setInteractiveImportSort: PropTypes.func.isRequired,
-  clearInteractiveImport: PropTypes.func.isRequired,
-  setInteractiveImportMode: PropTypes.func.isRequired,
-  executeCommand: PropTypes.func.isRequired,
+  dispatchFetchInteractiveImportItems: PropTypes.func.isRequired,
+  dispatchSetInteractiveImportSort: PropTypes.func.isRequired,
+  dispatchSetInteractiveImportMode: PropTypes.func.isRequired,
+  dispatchClearInteractiveImport: PropTypes.func.isRequired,
+  dispatchExecuteCommand: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired
 };
 

@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { createAction } from 'redux-actions';
 import sortByName from 'Utilities/Array/sortByName';
-import { filterBuilderTypes, filterBuilderValueTypes, sortDirections } from 'Helpers/Props';
+import { filterBuilderTypes, filterBuilderValueTypes, filterTypePredicates, sortDirections } from 'Helpers/Props';
 import createSetTableOptionReducer from './Creators/Reducers/createSetTableOptionReducer';
 import createSetClientSideCollectionSortReducer from './Creators/Reducers/createSetClientSideCollectionSortReducer';
 import createSetClientSideCollectionFilterReducer from './Creators/Reducers/createSetClientSideCollectionFilterReducer';
@@ -133,6 +133,12 @@ export const defaultState = {
       isVisible: false
     },
     {
+      name: 'year',
+      label: 'Year',
+      isSortable: true,
+      isVisible: false
+    },
+    {
       name: 'path',
       label: 'Path',
       isSortable: true,
@@ -246,7 +252,27 @@ export const defaultState = {
   selectedFilterKey: 'all',
 
   filters,
-  filterPredicates,
+
+  filterPredicates: {
+    ...filterPredicates,
+
+    episodeProgress: function(item, filterValue, type) {
+      const { statistics = {} } = item;
+
+      const {
+        episodeCount = 0,
+        episodeFileCount
+      } = statistics;
+
+      const progress = episodeCount ?
+        episodeFileCount / episodeCount * 100 :
+        100;
+
+      const predicate = filterTypePredicates[type];
+
+      return predicate(progress, filterValue);
+    }
+  },
 
   filterBuilderProps: [
     {
@@ -270,7 +296,17 @@ export const defaultState = {
     {
       name: 'network',
       label: 'Network',
-      type: filterBuilderTypes.STRING
+      type: filterBuilderTypes.STRING,
+      optionsSelector: function(items) {
+        const tagList = items.map((series) => {
+          return {
+            id: series.network,
+            name: series.network
+          };
+        });
+
+        return tagList.sort(sortByName);
+      }
     },
     {
       name: 'qualityProfileId',

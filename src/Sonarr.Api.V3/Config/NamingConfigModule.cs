@@ -3,12 +3,9 @@ using System.Linq;
 using FluentValidation;
 using FluentValidation.Results;
 using Nancy.ModelBinding;
-using Nancy.Responses;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Organizer;
 using Sonarr.Http;
-using Sonarr.Http.Extensions;
-using Sonarr.Http.Mapping;
 
 namespace Sonarr.Api.V3.Config
 {
@@ -33,7 +30,7 @@ namespace Sonarr.Api.V3.Config
             GetResourceById = GetNamingConfig;
             UpdateResource = UpdateNamingConfig;
 
-            Get["/examples"] = x => GetExamples(this.Bind<NamingConfigResource>());
+            Get("/examples",  x => GetExamples(this.Bind<NamingConfigResource>()));
 
             SharedValidator.RuleFor(c => c.MultiEpisodeStyle).InclusiveBetween(0, 5);
             SharedValidator.RuleFor(c => c.StandardEpisodeFormat).ValidEpisodeFormat();
@@ -41,6 +38,7 @@ namespace Sonarr.Api.V3.Config
             SharedValidator.RuleFor(c => c.AnimeEpisodeFormat).ValidAnimeEpisodeFormat();
             SharedValidator.RuleFor(c => c.SeriesFolderFormat).ValidSeriesFolderFormat();
             SharedValidator.RuleFor(c => c.SeasonFolderFormat).ValidSeasonFolderFormat();
+            SharedValidator.RuleFor(c => c.SpecialsFolderFormat).ValidSpecialsFolderFormat();
         }
 
         private void UpdateNamingConfig(NamingConfigResource resource)
@@ -70,7 +68,7 @@ namespace Sonarr.Api.V3.Config
             return GetNamingConfig();
         }
 
-        private JsonResponse<NamingExampleResource> GetExamples(NamingConfigResource config)
+        private object GetExamples(NamingConfigResource config)
         {
             if (config.Id == 0)
             {
@@ -114,7 +112,11 @@ namespace Sonarr.Api.V3.Config
                 ? null
                 : _filenameSampleService.GetSeasonFolderSample(nameSpec);
 
-            return sampleResource.AsResponse();
+            sampleResource.SpecialsFolderExample = nameSpec.SpecialsFolderFormat.IsNullOrWhiteSpace()
+                ? null
+                : _filenameSampleService.GetSpecialsFolderSample(nameSpec);
+
+            return sampleResource;
         }
 
         private void ValidateFormatResult(NamingConfig nameSpec)

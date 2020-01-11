@@ -21,7 +21,6 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
 
     public class HadoukenProxy : IHadoukenProxy
     {
-        private static int _callId;
         private readonly IHttpClient _httpClient;
         private readonly Logger _logger;
 
@@ -70,7 +69,9 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
 
         private T ProcessRequest<T>(HadoukenSettings settings, string method, params object[] parameters)
         {
-            var baseUrl = HttpRequestBuilder.BuildBaseUrl(settings.UseSsl, settings.Host, settings.Port, "api");
+            var baseUrl = HttpRequestBuilder.BuildBaseUrl(settings.UseSsl, settings.Host, settings.Port, settings.UrlBase);
+            baseUrl = HttpUri.CombinePath(baseUrl, "api");
+
             var requestBuilder = new JsonRpcRequestBuilder(baseUrl, method, parameters);
             requestBuilder.LogResponseContent = true;
             requestBuilder.NetworkCredential = new NetworkCredential(settings.Username, settings.Password);
@@ -147,7 +148,7 @@ namespace NzbDrone.Core.Download.Clients.Hadouken
             }
             catch(Exception ex)
             {
-                _logger.ErrorException("Failed to map Hadouken torrent data.", ex);
+                _logger.Error(ex, "Failed to map Hadouken torrent data.");
             }
 
             return torrent;

@@ -24,7 +24,7 @@ class AddNewSeriesSearchResult extends Component {
 
   componentDidUpdate(prevProps) {
     if (!prevProps.isExistingSeries && this.props.isExistingSeries) {
-      this.onAddSerisModalClose();
+      this.onAddSeriesModalClose();
     }
   }
 
@@ -35,8 +35,12 @@ class AddNewSeriesSearchResult extends Component {
     this.setState({ isNewAddSeriesModalOpen: true });
   }
 
-  onAddSerisModalClose = () => {
+  onAddSeriesModalClose = () => {
     this.setState({ isNewAddSeriesModalOpen: false });
+  }
+
+  onTVDBLinkPress = (event) => {
+    event.stopPropagation();
   }
 
   //
@@ -53,6 +57,7 @@ class AddNewSeriesSearchResult extends Component {
       overview,
       statistics,
       ratings,
+      folder,
       images,
       isExistingSeries,
       isSmallScreen
@@ -72,11 +77,13 @@ class AddNewSeriesSearchResult extends Component {
     }
 
     return (
-      <div>
+      <div className={styles.searchResult}>
         <Link
-          className={styles.searchResult}
+          className={styles.underlay}
           {...linkProps}
-        >
+        />
+
+        <div className={styles.overlay}>
           {
             isSmallScreen ?
               null :
@@ -88,7 +95,7 @@ class AddNewSeriesSearchResult extends Component {
               />
           }
 
-          <div>
+          <div className={styles.content}>
             <div className={styles.title}>
               {title}
 
@@ -110,6 +117,18 @@ class AddNewSeriesSearchResult extends Component {
                   /> :
                   null
               }
+
+              <Link
+                className={styles.tvdbLink}
+                to={`http://www.thetvdb.com/?tab=series&id=${tvdbId}`}
+                onPress={this.onTVDBLinkPress}
+              >
+                <Icon
+                  className={styles.tvdbLinkIcon}
+                  name={icons.EXTERNAL_LINK}
+                  size={28}
+                />
+              </Link>
             </div>
 
             <div>
@@ -152,7 +171,7 @@ class AddNewSeriesSearchResult extends Component {
               {overview}
             </div>
           </div>
-        </Link>
+        </div>
 
         <AddNewSeriesModal
           isOpen={isNewAddSeriesModalOpen && !isExistingSeries}
@@ -160,8 +179,9 @@ class AddNewSeriesSearchResult extends Component {
           title={title}
           year={year}
           overview={overview}
+          folder={folder}
           images={images}
-          onModalClose={this.onAddSerisModalClose}
+          onModalClose={this.onAddSeriesModalClose}
         />
       </div>
     );
@@ -178,6 +198,7 @@ AddNewSeriesSearchResult.propTypes = {
   overview: PropTypes.string,
   statistics: PropTypes.object.isRequired,
   ratings: PropTypes.object.isRequired,
+  folder: PropTypes.string.isRequired,
   images: PropTypes.arrayOf(PropTypes.object).isRequired,
   isExistingSeries: PropTypes.bool.isRequired,
   isSmallScreen: PropTypes.bool.isRequired

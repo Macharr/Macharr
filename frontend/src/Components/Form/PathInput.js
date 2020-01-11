@@ -1,10 +1,9 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import Autosuggest from 'react-autosuggest';
-import classNames from 'classnames';
 import { icons } from 'Helpers/Props';
 import Icon from 'Components/Icon';
 import FileBrowserModal from 'Components/FileBrowser/FileBrowserModal';
+import AutoSuggestInput from './AutoSuggestInput';
 import FormInputButton from './FormInputButton';
 import styles from './PathInput.css';
 
@@ -16,9 +15,20 @@ class PathInput extends Component {
   constructor(props, context) {
     super(props, context);
 
+    this._node = document.getElementById('portal-root');
+
     this.state = {
+      value: props.value,
       isFileBrowserModalOpen: false
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    const { value } = this.props;
+
+    if (prevProps.value !== value) {
+      this.setState({ value });
+    }
   }
 
   //
@@ -50,11 +60,8 @@ class PathInput extends Component {
   //
   // Listeners
 
-  onInputChange = (event, { newValue }) => {
-    this.props.onChange({
-      name: this.props.name,
-      value: newValue
-    });
+  onInputChange = ({ value }) => {
+    this.setState({ value });
   }
 
   onInputKeyDown = (event) => {
@@ -76,6 +83,11 @@ class PathInput extends Component {
   }
 
   onInputBlur = () => {
+    this.props.onChange({
+      name: this.props.name,
+      value: this.state.value
+    });
+
     this.props.onClearPaths();
   }
 
@@ -106,55 +118,35 @@ class PathInput extends Component {
   render() {
     const {
       className,
-      inputClassName,
       name,
-      value,
-      placeholder,
       paths,
-      hasError,
-      hasWarning,
+      includeFiles,
       hasFileBrowser,
-      onChange
+      onChange,
+      ...otherProps
     } = this.props;
 
-    const inputProps = {
-      className: classNames(
-        inputClassName,
-        hasError && styles.hasError,
-        hasWarning && styles.hasWarning,
-        hasFileBrowser && styles.hasFileBrowser
-      ),
-      name,
+    const {
       value,
-      placeholder,
-      autoComplete: 'off',
-      spellCheck: false,
-      onChange: this.onInputChange,
-      onKeyDown: this.onInputKeyDown,
-      onBlur: this.onInputBlur
-    };
-
-    const theme = {
-      container: styles.pathInputContainer,
-      containerOpen: styles.pathInputContainerOpen,
-      suggestionsContainer: styles.pathContainer,
-      suggestionsList: styles.pathList,
-      suggestion: styles.pathListItem,
-      suggestionHighlighted: styles.pathHighlighted
-    };
+      isFileBrowserModalOpen
+    } = this.state;
 
     return (
       <div className={className}>
-        <Autosuggest
-          id={name}
-          inputProps={inputProps}
-          theme={theme}
+        <AutoSuggestInput
+          {...otherProps}
+          className={hasFileBrowser ? styles.hasFileBrowser : undefined}
+          name={name}
+          value={value}
           suggestions={paths}
           getSuggestionValue={this.getSuggestionValue}
           renderSuggestion={this.renderSuggestion}
+          onInputKeyDown={this.onInputKeyDown}
+          onInputBlur={this.onInputBlur}
           onSuggestionSelected={this.onSuggestionSelected}
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}
+          onChange={this.onInputChange}
         />
 
         {
@@ -168,9 +160,10 @@ class PathInput extends Component {
               </FormInputButton>
 
               <FileBrowserModal
-                isOpen={this.state.isFileBrowserModalOpen}
+                isOpen={isFileBrowserModalOpen}
                 name={name}
                 value={value}
+                includeFiles={includeFiles}
                 onChange={onChange}
                 onModalClose={this.onFileBrowserModalClose}
               />
@@ -183,13 +176,10 @@ class PathInput extends Component {
 
 PathInput.propTypes = {
   className: PropTypes.string.isRequired,
-  inputClassName: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   value: PropTypes.string,
-  placeholder: PropTypes.string,
   paths: PropTypes.array.isRequired,
-  hasError: PropTypes.bool,
-  hasWarning: PropTypes.bool,
+  includeFiles: PropTypes.bool.isRequired,
   hasFileBrowser: PropTypes.bool,
   onChange: PropTypes.func.isRequired,
   onFetchPaths: PropTypes.func.isRequired,
@@ -197,8 +187,7 @@ PathInput.propTypes = {
 };
 
 PathInput.defaultProps = {
-  className: styles.pathInputWrapper,
-  inputClassName: styles.path,
+  className: styles.inputWrapper,
   value: '',
   hasFileBrowser: true
 };

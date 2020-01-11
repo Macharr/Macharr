@@ -274,7 +274,6 @@ class SeriesDetailsSeason extends Component {
                   />
                 </div>
               }
-              kind={kinds.INVERSE}
               position={tooltipPositions.BOTTOM}
             />
           </div>
@@ -325,7 +324,7 @@ class SeriesDetailsSeason extends Component {
 
                   <MenuItem
                     onPress={this.onInteractiveSearchPress}
-                    isDisabled={!episodeCount}
+                    isDisabled={!totalEpisodeCount}
                   >
                     <Icon
                       className={styles.actionMenuIcon}
@@ -361,7 +360,7 @@ class SeriesDetailsSeason extends Component {
 
                   <MenuItem
                     onPress={this.onHistoryPress}
-                    isDisabled={!episodeCount}
+                    isDisabled={!totalEpisodeCount}
                   >
                     <Icon
                       className={styles.actionMenuIcon}
@@ -389,7 +388,7 @@ class SeriesDetailsSeason extends Component {
                   name={icons.INTERACTIVE}
                   title="Interactive search for all episodes in this season"
                   size={24}
-                  isDisabled={!episodeCount}
+                  isDisabled={!totalEpisodeCount}
                   onPress={this.onInteractiveSearchPress}
                 />
 
@@ -405,7 +404,7 @@ class SeriesDetailsSeason extends Component {
                 <IconButton
                   className={styles.actionButton}
                   name={icons.EPISODE_FILE}
-                  title="Manage episode files in this series"
+                  title="Manage episode files in this season"
                   size={24}
                   isDisabled={!episodeFileCount}
                   onPress={this.onManageEpisodesPress}
@@ -416,7 +415,7 @@ class SeriesDetailsSeason extends Component {
                   name={icons.HISTORY}
                   title="View history for this season"
                   size={24}
-                  isDisabled={!episodeCount}
+                  isDisabled={!totalEpisodeCount}
                   onPress={this.onHistoryPress}
                 />
               </div>
@@ -456,6 +455,7 @@ class SeriesDetailsSeason extends Component {
                 }
                 <div className={styles.collapseButtonContainer}>
                   <IconButton
+                    iconClassName={styles.collapseButtonIcon}
                     name={icons.COLLAPSE}
                     size={20}
                     title="Hide episodes"

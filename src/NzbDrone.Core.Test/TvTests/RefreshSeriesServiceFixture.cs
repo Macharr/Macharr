@@ -30,6 +30,7 @@ namespace NzbDrone.Core.Test.TvTests
                                          .Build();
 
             _series = Builder<Series>.CreateNew()
+                                     .With(s => s.Status = SeriesStatusType.Continuing)
                                      .With(s => s.Seasons = new List<Season>
                                                             {
                                                                 season1
@@ -115,6 +116,30 @@ namespace NzbDrone.Core.Test.TvTests
         [Test]
         public void should_log_error_if_tvdb_id_not_found()
         {
+            Subject.Execute(new RefreshSeriesCommand(_series.Id));
+
+            Mocker.GetMock<ISeriesService>()
+                .Verify(v => v.UpdateSeries(It.Is<Series>(s => s.Status == SeriesStatusType.Deleted), It.IsAny<bool>()), Times.Once());
+
+            ExceptionVerification.ExpectedErrors(1);
+        }
+
+        [Test]
+        public void should_mark_as_deleted_if_tvdb_id_not_found()
+        {
+            Subject.Execute(new RefreshSeriesCommand(_series.Id));
+
+            Mocker.GetMock<ISeriesService>()
+                .Verify(v => v.UpdateSeries(It.Is<Series>(s => s.Status == SeriesStatusType.Deleted), It.IsAny<bool>()), Times.Once());
+
+            ExceptionVerification.ExpectedErrors(1);
+        }
+
+        [Test]
+        public void should_not_remark_as_deleted_if_tvdb_id_not_found()
+        {
+            _series.Status = SeriesStatusType.Deleted;
+
             Subject.Execute(new RefreshSeriesCommand(_series.Id));
 
             Mocker.GetMock<ISeriesService>()

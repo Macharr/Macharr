@@ -3,6 +3,7 @@ using FizzWare.NBuilder;
 using FluentAssertions;
 using Marr.Data;
 using NUnit.Framework;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.EpisodeImport.Specifications;
 using NzbDrone.Core.Parser.Model;
@@ -126,7 +127,6 @@ namespace NzbDrone.Core.Test.MediaFiles.EpisodeImport.Specifications
             Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeFalse();
         }
 
-
         [Test]
         public void should_return_true_if_upgrade_for_existing_episodeFile_for_multi_episodes()
         {
@@ -179,7 +179,6 @@ namespace NzbDrone.Core.Test.MediaFiles.EpisodeImport.Specifications
 
             Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeFalse();
         }
-
 
         [Test]
         public void should_return_false_if_not_an_upgrade_for_existing_episodeFile()
@@ -237,6 +236,84 @@ namespace NzbDrone.Core.Test.MediaFiles.EpisodeImport.Specifications
                                                      .ToList();
 
             Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_return_false_if_not_a_revision_upgrade_and_prefers_propers()
+        {
+            Mocker.GetMock<IConfigService>()
+                  .Setup(s => s.DownloadPropersAndRepacks)
+                  .Returns(ProperDownloadTypes.PreferAndUpgrade);
+
+            _localEpisode.Episodes = Builder<Episode>.CreateListOfSize(1)
+                                                     .All()
+                                                     .With(e => e.EpisodeFileId = 1)
+                                                     .With(e => e.EpisodeFile = new LazyLoaded<EpisodeFile>(
+                                                         new EpisodeFile
+                                                         {
+                                                             Quality = new QualityModel(Quality.HDTV720p, new Revision(version: 2))
+                                                         }))
+                                                     .Build()
+                                                     .ToList();
+
+            Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_return_true_if_not_a_revision_upgrade_and_does_not_prefer_propers()
+        {
+            Mocker.GetMock<IConfigService>()
+                  .Setup(s => s.DownloadPropersAndRepacks)
+                  .Returns(ProperDownloadTypes.DoNotPrefer);
+
+            _localEpisode.Episodes = Builder<Episode>.CreateListOfSize(1)
+                                                     .All()
+                                                     .With(e => e.EpisodeFileId = 1)
+                                                     .With(e => e.EpisodeFile = new LazyLoaded<EpisodeFile>(
+                                                         new EpisodeFile
+                                                         {
+                                                             Quality = new QualityModel(Quality.HDTV720p, new Revision(version: 2))
+                                                         }))
+                                                     .Build()
+                                                     .ToList();
+
+            Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_return_true_when_comparing_to_a_lower_quality_proper()
+        {
+            Mocker.GetMock<IConfigService>()
+                  .Setup(s => s.DownloadPropersAndRepacks)
+                  .Returns(ProperDownloadTypes.DoNotPrefer);
+
+            _localEpisode.Quality = new QualityModel(Quality.Bluray1080p);
+
+            _localEpisode.Episodes = Builder<Episode>.CreateListOfSize(1)
+                                                     .All()
+                                                     .With(e => e.EpisodeFileId = 1)
+                                                     .With(e => e.EpisodeFile = new LazyLoaded<EpisodeFile>(
+                                                         new EpisodeFile
+                                                         {
+                                                             Quality = new QualityModel(Quality.Bluray1080p, new Revision(version: 2))
+                                                         }))
+                                                     .Build()
+                                                     .ToList();
+
+            Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_return_true_if_episode_file_is_null()
+        {
+            _localEpisode.Episodes = Builder<Episode>.CreateListOfSize(2)
+                                                     .All()
+                                                     .With(e => e.EpisodeFileId = 1)
+                                                     .With(e => e.EpisodeFile = new LazyLoaded<EpisodeFile>(null))
+                                                     .Build()
+                                                     .ToList();
+
+            Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeTrue();
         }
     }
 }

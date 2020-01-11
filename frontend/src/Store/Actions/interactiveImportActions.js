@@ -1,14 +1,14 @@
-import $ from 'jquery';
 import moment from 'moment';
 import { createAction } from 'redux-actions';
 import { batchActions } from 'redux-batched-actions';
+import createAjaxRequest from 'Utilities/createAjaxRequest';
 import updateSectionState from 'Utilities/State/updateSectionState';
 import { createThunk, handleThunks } from 'Store/thunks';
 import { sortDirections } from 'Helpers/Props';
 import createSetClientSideCollectionSortReducer from './Creators/Reducers/createSetClientSideCollectionSortReducer';
 import createFetchHandler from './Creators/createFetchHandler';
 import createHandleActions from './Creators/createHandleActions';
-import { set, update } from './baseActions';
+import { set, update, updateItem } from './baseActions';
 
 //
 // Variables
@@ -16,6 +16,10 @@ import { set, update } from './baseActions';
 export const section = 'interactiveImport';
 
 const episodesSection = `${section}.episodes`;
+let abortCurrentRequest = null;
+let currentIds = [];
+
+const MAXIMUM_RECENT_FOLDERS = 10;
 
 //
 // State
@@ -49,6 +53,7 @@ export const defaultState = {
 
   episodes: {
     isFetching: false,
+    isReprocessing: false,
     isPopulated: false,
     error: null,
     sortKey: 'episodeNumber',
@@ -66,6 +71,7 @@ export const persistState = [
 // Actions Types
 
 export const FETCH_INTERACTIVE_IMPORT_ITEMS = 'interactiveImport/fetchInteractiveImportItems';
+export const REPROCESS_INTERACTIVE_IMPORT_ITEMS = 'interactiveImport/reprocessInteractiveImportItems';
 export const SET_INTERACTIVE_IMPORT_SORT = 'interactiveImport/setInteractiveImportSort';
 export const UPDATE_INTERACTIVE_IMPORT_ITEM = 'interactiveImport/updateInteractiveImportItem';
 export const UPDATE_INTERACTIVE_IMPORT_ITEMS = 'interactiveImport/updateInteractiveImportItems';
@@ -82,6 +88,7 @@ export const CLEAR_INTERACTIVE_IMPORT_EPISODES = 'interactiveImport/clearInterac
 // Action Creators
 
 export const fetchInteractiveImportItems = createThunk(FETCH_INTERACTIVE_IMPORT_ITEMS);
+export const reprocessInteractiveImportItems = createThunk(REPROCESS_INTERACTIVE_IMPORT_ITEMS);
 export const setInteractiveImportSort = createAction(SET_INTERACTIVE_IMPORT_SORT);
 export const updateInteractiveImportItem = createAction(UPDATE_INTERACTIVE_IMPORT_ITEM);
 export const updateInteractiveImportItems = createAction(UPDATE_INTERACTIVE_IMPORT_ITEMS);
@@ -105,10 +112,10 @@ export const actionHandlers = handleThunks({
 
     dispatch(set({ section, isFetching: true }));
 
-    const promise = $.ajax({
+    const promise = createAjaxRequest({
       url: '/manualimport',
       data: payload
-    });
+    }).request;
 
     promise.done((data) => {
       dispatch(batchActions([
@@ -130,6 +137,72 @@ export const actionHandlers = handleThunks({
         isPopulated: false,
         error: xhr
       }));
+    });
+  },
+
+  [REPROCESS_INTERACTIVE_IMPORT_ITEMS]: function(getState, payload, dispatch) {
+    if (abortCurrentRequest) {
+      abortCurrentRequest();
+    }
+
+    dispatch(batchActions([
+      ...currentIds.map((id) => updateItem({
+        section,
+        id,
+        isReprocessing: false
+      })),
+      ...payload.ids.map((id) => updateItem({
+        section,
+        id,
+        isReprocessing: true
+      }))
+    ]));
+
+    const items = getState()[section].items;
+
+    const requestPayload = payload.ids.map((id) => {
+      const item = items.find((i) => i.id === id);
+
+      return {
+        id,
+        path: item.path,
+        seriesId: item.series.id,
+        downloadId: item.downloadId
+      };
+    });
+
+    const { request, abortRequest } = createAjaxRequest({
+      method: 'POST',
+      url: '/manualimport',
+      contentType: 'application/json',
+      data: JSON.stringify(requestPayload)
+    });
+
+    abortCurrentRequest = abortRequest;
+    currentIds = payload.ids;
+
+    request.done((data) => {
+      dispatch(batchActions(
+        data.map((item) => updateItem({
+          section,
+          ...item,
+          isReprocessing: false
+        }))
+      ));
+    });
+
+    request.fail((xhr) => {
+      if (xhr.aborted) {
+        return;
+      }
+
+      dispatch(batchActions(
+        payload.ids.map((id) => updateItem({
+          section,
+          id,
+          isReprocessing: false
+        }))
+      ));
     });
   },
 
@@ -178,12 +251,14 @@ export const reducers = createHandleActions({
     const index = recentFolders.findIndex((r) => r.folder === folder);
 
     if (index > -1) {
-      recentFolders.splice(index, 1, recentFolder);
-    } else {
-      recentFolders.push(recentFolder);
+      recentFolders.splice(index, 1);
     }
 
-    return Object.assign({}, state, { recentFolders });
+    recentFolders.push(recentFolder);
+
+    const sliceIndex = Math.max(recentFolders.length - MAXIMUM_RECENT_FOLDERS, 0);
+
+    return Object.assign({}, state, { recentFolders: recentFolders.slice(sliceIndex) });
   },
 
   [REMOVE_RECENT_FOLDER]: function(state, { payload }) {

@@ -23,6 +23,7 @@ import PageToolbarButton from 'Components/Page/Toolbar/PageToolbarButton';
 import Popover from 'Components/Tooltip/Popover';
 import Tooltip from 'Components/Tooltip/Tooltip';
 import EpisodeFileEditorModal from 'EpisodeFile/Editor/EpisodeFileEditorModal';
+import InteractiveImportModal from 'InteractiveImport/InteractiveImportModal';
 import OrganizePreviewModalConnector from 'Organize/OrganizePreviewModalConnector';
 import QualityProfileNameConnector from 'Settings/Profiles/Quality/QualityProfileNameConnector';
 import SeriesPoster from 'Series/SeriesPoster';
@@ -33,8 +34,8 @@ import SeriesAlternateTitles from './SeriesAlternateTitles';
 import SeriesDetailsSeasonConnector from './SeriesDetailsSeasonConnector';
 import SeriesTagsConnector from './SeriesTagsConnector';
 import SeriesDetailsLinks from './SeriesDetailsLinks';
+import { getSeriesStatusDetails } from 'Series/SeriesStatus';
 import styles from './SeriesDetails.css';
-import InteractiveImportModal from '../../InteractiveImport/InteractiveImportModal';
 
 const defaultFontSize = parseInt(fonts.defaultFontSize);
 const lineHeight = parseFloat(fonts.lineHeight);
@@ -216,7 +217,7 @@ class SeriesDetails extends Component {
       overviewHeight
     } = this.state;
 
-    const continuing = status === 'continuing';
+    const statusDetails = getSeriesStatusDetails(status);
 
     let episodeFilesCountMessage = 'No episode files';
 
@@ -280,7 +281,7 @@ class SeriesDetails extends Component {
             />
 
             <PageToolbarButton
-              label="Manual Import"
+              label="Manual File Import"
               iconName={icons.INTERACTIVE}
               onPress={this.onInteractiveImportPress}
             />
@@ -465,16 +466,16 @@ class SeriesDetails extends Component {
 
                   <Label
                     className={styles.detailsLabel}
-                    title={continuing ? 'More episodes/another season is expected' : 'No additional episodes or or another season is expected'}
+                    title={statusDetails.message}
                     size={sizes.LARGE}
                   >
                     <Icon
-                      name={continuing ? icons.SERIES_CONTINUING : icons.SERIES_ENDED}
+                      name={statusDetails.icon}
                       size={17}
                     />
 
                     <span className={styles.qualityProfileName}>
-                      {continuing ? 'Continuing' : 'Ended'}
+                      {statusDetails.title}
                     </span>
                   </Label>
 
@@ -638,6 +639,7 @@ class SeriesDetails extends Component {
 
           <InteractiveImportModal
             isOpen={isInteractiveImportModalOpen}
+            seriesId={id}
             folder={path}
             allowSeriesChange={false}
             showFilterExistingFiles={true}
@@ -688,7 +690,7 @@ SeriesDetails.propTypes = {
 
 SeriesDetails.defaultProps = {
   statistics: {},
-  tag: [],
+  tags: [],
   isSaving: false
 };
 

@@ -4,6 +4,7 @@ import formatBytes from 'Utilities/Number/formatBytes';
 import hasDifferentItems from 'Utilities/Object/hasDifferentItems';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
 import Icon from 'Components/Icon';
+import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import TableRow from 'Components/Table/TableRow';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import TableRowCellButton from 'Components/Table/Cells/TableRowCellButton';
@@ -172,6 +173,7 @@ class InteractiveImportRow extends Component {
       language,
       size,
       rejections,
+      isReprocessing,
       isSelected,
       onSelectedChange
     } = this.props;
@@ -189,7 +191,7 @@ class InteractiveImportRow extends Component {
       .join(', ');
 
     const showSeriesPlaceholder = isSelected && !series;
-    const showSeasonNumberPlaceholder = isSelected && !!series && isNaN(seasonNumber);
+    const showSeasonNumberPlaceholder = isSelected && !!series && isNaN(seasonNumber) && !isReprocessing;
     const showEpisodeNumbersPlaceholder = isSelected && Number.isInteger(seasonNumber) && !episodes.length;
     const showQualityPlaceholder = isSelected && !quality;
     const showLanguagePlaceholder = isSelected && !language;
@@ -211,6 +213,7 @@ class InteractiveImportRow extends Component {
 
         <TableRowCellButton
           isDisabled={!allowSeriesChange}
+          title={allowSeriesChange ? 'Click to change series' : undefined}
           onPress={this.onSelectSeriesPress}
         >
           {
@@ -220,15 +223,26 @@ class InteractiveImportRow extends Component {
 
         <TableRowCellButton
           isDisabled={!series}
+          title={series ? 'Click to change season' : undefined}
           onPress={this.onSelectSeasonPress}
         >
           {
             showSeasonNumberPlaceholder ? <InteractiveImportRowCellPlaceholder /> : seasonNumber
           }
+
+          {
+            isReprocessing && seasonNumber == null ?
+              <LoadingIndicator className={styles.reprocessing}
+                size={20}
+
+              /> : null
+          }
+
         </TableRowCellButton>
 
         <TableRowCellButton
           isDisabled={!series || isNaN(seasonNumber)}
+          title={series && !isNaN(seasonNumber) ? 'Click to change episode' : undefined}
           onPress={this.onSelectEpisodePress}
         >
           {
@@ -238,6 +252,7 @@ class InteractiveImportRow extends Component {
 
         <TableRowCellButton
           className={styles.quality}
+          title="Click to change quality"
           onPress={this.onSelectQualityPress}
         >
           {
@@ -256,6 +271,7 @@ class InteractiveImportRow extends Component {
 
         <TableRowCellButton
           className={styles.language}
+          title="Click to change language"
           onPress={this.onSelectLanguagePress}
         >
           {
@@ -278,7 +294,7 @@ class InteractiveImportRow extends Component {
 
         <TableRowCell>
           {
-            !!rejections.length &&
+            rejections && rejections.length ?
               <Popover
                 anchor={
                   <Icon
@@ -301,7 +317,8 @@ class InteractiveImportRow extends Component {
                   </ul>
                 }
                 position={tooltipPositions.LEFT}
-              />
+              /> :
+              null
           }
         </TableRowCell>
 
@@ -320,9 +337,10 @@ class InteractiveImportRow extends Component {
 
         <SelectEpisodeModal
           isOpen={isSelectEpisodeModalOpen}
-          id={id}
+          ids={[id]}
           seriesId={series && series.id}
           seasonNumber={seasonNumber}
+          relativePath={relativePath}
           onModalClose={this.onSelectEpisodeModalClose}
         />
 
@@ -358,6 +376,7 @@ InteractiveImportRow.propTypes = {
   language: PropTypes.object,
   size: PropTypes.number.isRequired,
   rejections: PropTypes.arrayOf(PropTypes.object).isRequired,
+  isReprocessing: PropTypes.bool,
   isSelected: PropTypes.bool,
   onSelectedChange: PropTypes.func.isRequired,
   onValidRowChange: PropTypes.func.isRequired

@@ -9,7 +9,7 @@ using NzbDrone.Core.Download.Clients.Nzbget;
 using NzbDrone.Test.Common;
 using NzbDrone.Core.RemotePathMappings;
 using NzbDrone.Common.Disk;
-using NzbDrone.Core.Download.Clients;
+using NzbDrone.Core.Exceptions;
 
 namespace NzbDrone.Core.Test.Download.DownloadClientTests.NzbgetTests
 {
@@ -351,7 +351,7 @@ namespace NzbDrone.Core.Test.Download.DownloadClientTests.NzbgetTests
 
             var remoteEpisode = CreateRemoteEpisode();
 
-            Assert.Throws<DownloadClientException>(() => Subject.Download(remoteEpisode));
+            Assert.Throws<DownloadClientRejectedReleaseException>(() => Subject.Download(remoteEpisode));
         }
 
         [Test]
@@ -404,6 +404,37 @@ namespace NzbDrone.Core.Test.Download.DownloadClientTests.NzbgetTests
             var result = Subject.GetItems().Single();
 
             result.OutputPath.Should().Be(@"O:\mymount\Droned.S01E01.Pilot.1080p.WEB-DL-DRONE".AsOsAgnostic());
+        }
+
+        [Test]
+        public void should_use_dest_dir_if_final_dir_is_null()
+        {
+            GivenQueue(null);
+            GivenHistory(_completed);
+
+            Subject.GetItems().First().OutputPath.Should().Be(_completed.DestDir);
+        }
+
+        [Test]
+        public void should_use_dest_dir_if_final_dir_is_not_set()
+        {
+            _completed.FinalDir = string.Empty;
+
+            GivenQueue(null);
+            GivenHistory(_completed);
+
+            Subject.GetItems().First().OutputPath.Should().Be(_completed.DestDir);
+        }
+
+        [Test]
+        public void should_use_final_dir_when_set_instead_of_dest_dir()
+        {
+            _completed.FinalDir = "/remote/mount/tv2/Droned.S01E01.Pilot.1080p.WEB-DL-DRONE";
+
+            GivenQueue(null);
+            GivenHistory(_completed);
+
+            Subject.GetItems().First().OutputPath.Should().Be(_completed.FinalDir);
         }
 
         [TestCase("11.0", false)]

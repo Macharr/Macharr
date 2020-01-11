@@ -4,57 +4,62 @@ const livereload = require('gulp-livereload');
 const path = require('path');
 const webpack = require('webpack');
 const errorHandler = require('./helpers/errorHandler');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const uiFolder = 'UI';
-const root = path.join(__dirname, '..', 'src');
+const frontendFolder = path.join(__dirname, '..');
+const srcFolder = path.join(frontendFolder, 'src');
 const isProduction = process.argv.indexOf('--production') > -1;
 
-console.log('ROOT:', root);
+const distFolder = path.resolve(frontendFolder, '..', '_output', uiFolder);
+
+console.log('Source Folder:', srcFolder);
+console.log('Output Folder:', distFolder);
 console.log('isProduction:', isProduction);
 
 const cssVarsFiles = [
   '../src/Styles/Variables/colors',
   '../src/Styles/Variables/dimensions',
   '../src/Styles/Variables/fonts',
-  '../src/Styles/Variables/animations'
+  '../src/Styles/Variables/animations',
+  '../src/Styles/Variables/zIndexes'
 ].map(require.resolve);
 
-const extractCSSPlugin = new ExtractTextPlugin({
-  filename: path.join('_output', uiFolder, 'Content', 'styles.css'),
-  allChunks: true,
-  disable: false,
-  ignoreOrder: true
-});
+// Override the way HtmlWebpackPlugin injects the scripts
+HtmlWebpackPlugin.prototype.injectAssetsIntoHtml = function(html, assets, assetTags) {
+  const head = assetTags.head.map((v) => {
+    v.attributes = { rel: 'stylesheet', type: 'text/css', href: `/${v.attributes.href.replace('\\', '/')}` };
+    return this.createHtmlTag(v);
+  });
+  const body = assetTags.body.map((v) => {
+    v.attributes = { src: `/${v.attributes.src}` };
+    return this.createHtmlTag(v);
+  });
+
+  return html
+    .replace('<!-- webpack bundles head -->', head.join('\r\n  '))
+    .replace('<!-- webpack bundles body -->', body.join('\r\n  '));
+};
 
 const plugins = [
-  extractCSSPlugin,
-
-  new webpack.optimize.CommonsChunkPlugin({
-    name: 'vendor'
-  }),
-
   new webpack.DefinePlugin({
     __DEV__: !isProduction,
     'process.env.NODE_ENV': isProduction ? JSON.stringify('production') : JSON.stringify('development')
+  }),
+
+  new MiniCssExtractPlugin({
+    filename: path.join('Content', 'styles.css')
+  }),
+
+  new HtmlWebpackPlugin({
+    template: 'frontend/src/index.html',
+    filename: 'index.html'
   })
 ];
 
-if (isProduction) {
-  plugins.push(new UglifyJSPlugin({
-    sourceMap: true,
-    uglifyOptions: {
-      mangle: false,
-      output: {
-        comments: false,
-        beautify: true
-      }
-    }
-  }));
-}
-
 const config = {
+  mode: isProduction ? 'production' : 'development',
   devtool: '#source-map',
 
   stats: {
@@ -66,15 +71,13 @@ const config = {
   },
 
   entry: {
-    preload: 'preload.js',
-    vendor: 'vendor.js',
     index: 'index.js'
   },
 
   resolve: {
     modules: [
-      root,
-      path.join(root, 'Shims'),
+      srcFolder,
+      path.join(srcFolder, 'Shims'),
       'node_modules'
     ],
     alias: {
@@ -83,8 +86,20 @@ const config = {
   },
 
   output: {
-    filename: path.join('_output', uiFolder, '[name].js'),
+    path: distFolder,
+    filename: '[name].js',
     sourceMapFilename: '[file].map'
+  },
+
+  optimization: {
+    chunkIds: 'named',
+    splitChunks: {
+      chunks: 'initial'
+    }
+  },
+
+  performance: {
+    hints: false
   },
 
   plugins,
@@ -101,53 +116,57 @@ const config = {
       {
         test: /\.js?$/,
         exclude: /(node_modules|JsLibraries)/,
-        loader: 'babel-loader',
-        query: {
-          plugins: ['transform-class-properties'],
-          presets: ['es2015', 'decorators-legacy', 'react', 'stage-2'],
-          env: {
-            development: {
-              plugins: ['transform-react-jsx-source']
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              configFile: `${frontendFolder}/babel.config.js`,
+              envName: isProduction ? 'production' : 'development',
+              presets: [
+                [
+                  '@babel/preset-env',
+                  {
+                    modules: false,
+                    loose: true,
+                    debug: false,
+                    useBuiltIns: 'entry',
+                    corejs: 3
+                  }
+                ]
+              ]
             }
           }
-        }
+        ]
       },
 
       // CSS Modules
       {
         test: /\.css$/,
         exclude: /(node_modules|globals.css)/,
-        use: extractCSSPlugin.extract({
-          fallback: 'style-loader',
-          use: [
-            {
-              loader: 'css-variables-loader',
-              options: {
-                cssVarsFiles
-              }
-            },
-            {
-              loader: 'css-loader',
-              options: {
-                modules: true,
-                importLoaders: 1,
-                localIdentName: '[name]-[local]-[hash:base64:5]',
-                sourceMap: true
-              }
-            },
-            {
-              loader: 'postcss-loader',
-              options: {
-                config: {
-                  ctx: {
-                    cssVarsFiles
-                  },
-                  path: 'frontend/postcss.config.js'
-                }
+        use: [
+          { loader: MiniCssExtractPlugin.loader },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+              modules: {
+                localIdentName: '[name]/[local]/[hash:base64:5]'
               }
             }
-          ]
-        })
+          },
+          {
+            loader: 'postcss-loader',
+            options: {
+              ident: 'postcss',
+              config: {
+                ctx: {
+                  cssVarsFiles
+                },
+                path: 'frontend/postcss.config.js'
+              }
+            }
+          }
+        ]
       },
 
       // Global styles
@@ -195,17 +214,16 @@ const config = {
 };
 
 gulp.task('webpack', () => {
-  return gulp.src('index.js')
-    .pipe(webpackStream(config))
-    .pipe(gulp.dest(''));
+  return webpackStream(config)
+    .pipe(gulp.dest('_output/UI'));
 });
 
 gulp.task('webpackWatch', () => {
   config.watch = true;
-  return gulp.src('')
-    .pipe(webpackStream(config))
+
+  return webpackStream(config)
     .on('error', errorHandler)
-    .pipe(gulp.dest(''))
+    .pipe(gulp.dest('_output/UI'))
     .on('error', errorHandler)
     .pipe(livereload())
     .on('error', errorHandler);
